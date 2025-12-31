@@ -1,0 +1,327 @@
+/* src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans antialiased text-gray-800 bg-gray-50;
+  }
+}
+
+@layer components {
+  .btn-pos {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 
+           focus:outline-none focus:ring-2 focus:ring-opacity-50;
+  }
+  
+  .card-pos {
+    @apply bg-white rounded-xl border border-gray-200 shadow-soft 
+           transition-all duration-200 hover:shadow-card;
+  }
+  
+  .input-pos {
+    @apply w-full px-4 py-3 rounded-lg border border-gray-300 
+           focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200 
+           transition-all duration-200;
+  }
+}
+
+@layer utilities {
+  /* Animación de deslizamiento hacia arriba */
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+  
+  /* Animación de zoom para modales */
+  .animate-in {
+    animation: zoomIn 0.2s ease-out;
+  }
+  
+  /* Animación de desvanecimiento hacia arriba */
+  .fade-in-up {
+    animation: fadeInUp 0.3s ease-out;
+  }
+  
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes zoomIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Animación para la barra de progreso de las alertas */
+  @keyframes shrink {
+    from {
+      width: 100%;
+    }
+    to {
+      width: 0%;
+    }
+  }
+  
+  /* Animación de rebote para elementos importantes */
+  .animate-bounce-smooth {
+    animation: bounceSmooth 2s infinite;
+  }
+  
+  @keyframes bounceSmooth {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-5px);
+    }
+  }
+  
+  /* Animación de pulso para notificaciones */
+  .pulse-soft {
+    animation: pulseSoft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  @keyframes pulseSoft {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.8;
+    }
+  }
+  
+  /* Animación de rotación para íconos de carga */
+  .animate-spin-slow {
+    animation: spin 3s linear infinite;
+  }
+  
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-primary-300 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-primary-400;
+}
+
+/* Estilos específicos para modales y alertas */
+.modal-overlay {
+  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.alert-success-gradient {
+  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+}
+
+.alert-error-gradient {
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
+}
+
+.alert-warning-gradient {
+  background: linear-gradient(135deg, #fa8c16 0%, #ffa940 100%);
+}
+
+.alert-info-gradient {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+}
+
+/* Efectos de brillo para íconos en alertas */
+.icon-glow-success {
+  filter: drop-shadow(0 0 8px rgba(82, 196, 26, 0.4));
+}
+
+.icon-glow-error {
+  filter: drop-shadow(0 0 8px rgba(255, 77, 79, 0.4));
+}
+
+.icon-glow-warning {
+  filter: drop-shadow(0 0 8px rgba(250, 140, 22, 0.4));
+}
+
+.icon-glow-info {
+  filter: drop-shadow(0 0 8px rgba(24, 144, 255, 0.4));
+}
+
+/* Agrega esto en tu archivo index.css después de los estilos existentes */
+
+/* Mejoras para el scroll del carrito */
+.cart-scroll-container {
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.cart-scroll-content {
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Para el efecto de desvanecimiento en los bordes del scroll */
+.cart-scroll-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(to bottom, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 100%);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.cart-scroll-content::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(to top, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 100%);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Estilos específicos para el carrito en modo oscuro */
+.dark .card-pos {
+  @apply bg-gray-800 border-gray-700;
+}
+
+.dark .cart-scroll-content::before {
+  background: linear-gradient(to bottom, rgba(31,41,55,1) 0%, rgba(31,41,55,0) 100%);
+}
+
+.dark .cart-scroll-content::after {
+  background: linear-gradient(to top, rgba(31,41,55,1) 0%, rgba(31,41,55,0) 100%);
+}
+
+/* Animaciones para el Header */
+@keyframes pulse-subtle {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+/* Transiciones suaves para los dropdowns */
+.dropdown-enter {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.dropdown-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 200ms, transform 200ms;
+}
+
+.dropdown-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.dropdown-exit-active {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 200ms, transform 200ms;
+}
+
+/* Estilos específicos para el modo oscuro del Header */
+.dark .bg-gradient-pos {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Efecto de hover para los botones en modo oscuro */
+.dark button:hover {
+  transition: background-color 0.2s ease;
+}
+
+
+
+/* Agrega esta animación a tu index.css */
+@keyframes shine {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.animate-\[shine_1\.5s_ease-in-out_infinite\] {
+  animation: shine 1.5s ease-in-out infinite;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 1000px;
+  }
+}
+
+.animate-slideDown {
+  animation: slideDown 0.3s ease-out forwards;
+}
