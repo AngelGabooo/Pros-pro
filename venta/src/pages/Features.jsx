@@ -1,12 +1,11 @@
-// src/pages/Features.jsx
 import React from 'react';
 import Header from '../components/organisms/Header';
 import Footer from '../components/organisms/Footer';
 import Card from '../components/atoms/Card';
 import Button from '../components/atoms/Button';
 import Badge from '../components/atoms/Badge';
+import Alert from '../components/atoms/Alert'; // Asegúrate de tener este componente
 import { useNavigate } from 'react-router-dom';
-
 import {
   IconCashRegister,
   IconChartLine,
@@ -29,14 +28,17 @@ import {
   IconSparkles,
   IconRocket,
   IconTrendingUp,
-  IconZap,
+  IconBolt,
   IconCheck,
-  IconPlayCircle,
-  IconArrowRight
+  IconPlayerPlay,
+  IconArrowRight,
+  IconInfoCircle,
+  IconX
 } from '@tabler/icons-react';
 
 const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, user, onLogout }) => {
   const navigate = useNavigate();
+  const [showVideoAlert, setShowVideoAlert] = React.useState(false);
 
   const heroFeatures = [
     { text: 'Facturación SUNAT en 1 clic', icon: IconCheck },
@@ -92,14 +94,14 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
       icon: IconUsers,
       title: 'CRM Avanzado',
       description: 'Gestiona relaciones y fideliza clientes con marketing automatizado',
-      color: 'accent-purple',
+      color: 'purple',
       points: ['Segmentación automática', 'Campañas email/SMS', 'Programa de puntos', 'Historial completo']
     },
     {
       icon: IconReceipt,
       title: 'Facturación 100% Digital',
       description: 'Integración completa con SUNAT y múltiples formatos personalizables',
-      color: 'accent-cyan',
+      color: 'cyan',
       points: ['Factura electrónica', 'Boletas electrónicas', 'Notas de crédito', 'Formatos personalizados']
     },
     {
@@ -127,7 +129,7 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
       icon: IconCreditCard,
       title: 'Pagos Integrados',
       description: 'Acepta todos los métodos de pago del mercado peruano',
-      color: 'accent-purple',
+      color: 'purple',
       points: ['Tarjetas crédito/débito', 'Yape/Plin', 'Transferencias', 'Efectivo digital']
     }
   ];
@@ -140,7 +142,7 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
       metric: '+40%'
     },
     {
-      icon: IconZap,
+      icon: IconBolt,
       title: 'Ahorra Tiempo',
       description: 'Automatiza procesos que tomaban horas',
       metric: '70% menos tiempo'
@@ -162,18 +164,66 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
   return (
     <div className={darkMode ? 'dark' : ''}>
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex flex-col">
-        <Header 
+        <Header
           isAuthenticated={isAuthenticated}
           user={user}
           onLogout={onLogout}
           onThemeToggle={onThemeToggle}
           darkMode={darkMode}
         />
-        
+
+        {/* Alerta de video no disponible */}
+        {showVideoAlert && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setShowVideoAlert(false)} />
+            <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 animate-in zoom-in-95 duration-300">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center">
+                  <div className="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center mr-4">
+                    <IconInfoCircle className="text-primary-600 text-xl" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900">Video en producción</h3>
+                </div>
+                <button
+                  onClick={() => setShowVideoAlert(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <IconX size={24} />
+                </button>
+              </div>
+              <p className="text-gray-700 mb-6">
+                ¡Estamos trabajando en un video demo profesional de alta calidad para mostrarte POS Pro en acción!
+              </p>
+              <p className="text-gray-600 text-sm mb-8">
+                Mientras tanto, puedes probar la versión gratuita o explorar todas las funciones en detalle.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="primary"
+                  fullWidth
+                  onClick={() => {
+                    setShowVideoAlert(false);
+                    navigate('/register');
+                  }}
+                >
+                  Probar Gratis Ahora
+                </Button>
+                <Button
+                  variant="outline"
+                  fullWidth
+                  onClick={() => setShowVideoAlert(false)}
+                >
+                  Entendido
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <main className="flex-grow">
-          {/* Hero Section con video preview */}
+          {/* Hero Section con IMAGEN real en lugar de placeholder */}
           <section className="relative py-20 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-success-500/5 to-accent-purple/10"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-success-500/5 to-purple-500/10"></div>
             <div className="container relative mx-auto px-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                 <div>
@@ -181,16 +231,16 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
                     <IconSparkles size={16} className="mr-2" />
                     #1 en Puntos de Venta Perú 2024
                   </Badge>
-                  
+
                   <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
                     Más que un POS,
                     <span className="block text-primary-500">tu aliado de crecimiento</span>
                   </h1>
-                  
+
                   <p className="text-xl text-gray-600 mb-8">
                     Todo lo que necesitas para vender más, organizarte mejor y hacer crecer tu negocio en una sola plataforma.
                   </p>
-                  
+
                   <div className="space-y-3 mb-10">
                     {heroFeatures.map((feature, idx) => (
                       <div key={idx} className="flex items-center">
@@ -199,10 +249,10 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
                       </div>
                     ))}
                   </div>
-                  
+
                   <div className="flex flex-wrap gap-4">
-                    <Button 
-                      variant="primary" 
+                    <Button
+                      variant="primary"
                       size="xl"
                       onClick={() => navigate('/register')}
                       className="px-8 py-4"
@@ -210,37 +260,39 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
                       Probar Gratis 30 Días
                       <IconRocket size={20} className="ml-2" />
                     </Button>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="xl"
-                      onClick={() => document.getElementById('video-demo')?.scrollIntoView()}
+                      onClick={() => document.getElementById('video-demo')?.scrollIntoView({ behavior: 'smooth' })}
                       className="px-8 py-4"
                     >
-                      <IconPlayCircle size={20} className="mr-2" />
+                      <IconPlayerPlay size={20} className="mr-2" />
                       Ver Demo en Video
                     </Button>
                   </div>
                 </div>
-                
+
+                {/* IMAGEN REAL DE DEMO INTERACTIVA */}
                 <div className="relative">
-                  <div className="relative rounded-3xl overflow-hidden shadow-2xl">
-                    <div className="aspect-video bg-gradient-to-br from-primary-500 to-success-500 flex items-center justify-center">
-                      <div className="text-center p-8">
-                        <div className="w-20 h-20 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-6">
-                          <IconCashRegister className="text-white text-3xl" />
-                        </div>
-                        <h3 className="text-2xl font-bold text-white mb-2">Demo Interactiva</h3>
-                        <p className="text-white/90">Descubre cómo funciona POS Pro</p>
-                      </div>
+                  <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-gray-200">
+                    <img
+                      src="/1.png"
+                      alt="POS Pro - Interfaz de punto de venta moderna"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                    <div className="absolute bottom-6 left-6 text-white">
+                      <h3 className="text-2xl font-bold mb-1">Demo Interactiva</h3>
+                      <p className="text-white/90">Así se ve POS Pro en acción</p>
                     </div>
                   </div>
-                  
+
                   {/* Elementos flotantes */}
-                  <div className="absolute -top-4 -right-4 w-24 h-24 bg-success-100 rounded-2xl flex items-center justify-center shadow-lg">
+                  <div className="absolute -top-4 -right-4 w-24 h-24 bg-success-100 rounded-2xl flex items-center justify-centeeer shadow-lg">
                     <IconTrendingUp className="text-success-600 text-2xl" />
                   </div>
                   <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-primary-100 rounded-2xl flex items-center justify-center shadow-lg">
-                    <IconZap className="text-primary-600 text-xl" />
+                    <IconBolt className="text-primary-600 text-xl" />
                   </div>
                 </div>
               </div>
@@ -276,7 +328,7 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-20">
                 {coreFeatures.map((feature, index) => (
-                  <Card 
+                  <Card
                     key={index}
                     hover
                     className="h-full transform transition-all duration-300 hover:-translate-y-2"
@@ -286,15 +338,15 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
                       <div className={`w-16 h-16 rounded-2xl bg-${feature.color}-100 flex items-center justify-center mb-6`}>
                         <feature.icon className={`text-${feature.color}-600 text-2xl`} />
                       </div>
-                      
+
                       <h3 className="text-2xl font-bold text-gray-900 mb-3">
                         {feature.title}
                       </h3>
-                      
+
                       <p className="text-gray-600 mb-6 flex-grow">
                         {feature.description}
                       </p>
-                      
+
                       <div className="mb-6">
                         <div className="text-sm text-gray-500 mb-2">Incluye:</div>
                         <ul className="space-y-2">
@@ -306,7 +358,7 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
                           ))}
                         </ul>
                       </div>
-                      
+
                       <div className="mt-auto pt-6 border-t border-gray-200">
                         <div className="text-lg font-bold text-gray-900">{feature.stats}</div>
                       </div>
@@ -322,11 +374,7 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {advancedFeatures.map((feature, index) => (
-                    <Card 
-                      key={index}
-                      hover
-                      className="p-6"
-                    >
+                    <Card key={index} hover className="p-6">
                       <div className="flex items-start mb-4">
                         <div className={`w-12 h-12 rounded-xl bg-${feature.color}-100 flex items-center justify-center mr-4 flex-shrink-0`}>
                           <feature.icon className={`text-${feature.color}-600 text-xl`} />
@@ -336,7 +384,7 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
                           <p className="text-gray-600 text-sm">{feature.description}</p>
                         </div>
                       </div>
-                      
+
                       <ul className="space-y-2">
                         {feature.points.map((point, idx) => (
                           <li key={idx} className="flex items-center text-sm text-gray-600">
@@ -350,7 +398,7 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
                 </div>
               </div>
 
-              {/* Demo Video Section */}
+              {/* Sección de Video Demo con alerta */}
               <div className="mb-20" id="video-demo">
                 <Card className="overflow-hidden">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
@@ -375,18 +423,22 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
                           <span className="text-gray-700">Facturación electrónica</span>
                         </li>
                       </ul>
-                      <Button variant="primary" size="lg">
-                        <IconPlayCircle size={20} className="mr-2" />
+                      <Button
+                        variant="primary"
+                        size="lg"
+                        onClick={() => setShowVideoAlert(true)}
+                      >
+                        <IconPlayerPlay size={20} className="mr-2" />
                         Reproducir Video Demo
                       </Button>
                     </div>
-                    <div className="bg-gradient-to-br from-primary-500 to-accent-purple flex items-center justify-center min-h-[400px]">
+                    <div className="bg-gradient-to-br from-primary-500 to-purple-500 flex items-center justify-center min-h-[400px]">
                       <div className="text-center text-white p-8">
                         <div className="w-24 h-24 rounded-3xl bg-white/20 flex items-center justify-center mx-auto mb-6">
-                          <IconPlayCircle className="text-white text-4xl" />
+                          <IconPlayerPlay className="text-white text-4xl" />
                         </div>
-                        <h4 className="text-2xl font-bold mb-2">Demo en Video</h4>
-                        <p>3 minutos que cambiarán tu negocio</p>
+                        <h4 className="text-2xl font-bold mb-2">Video Demo Próximamente</h4>
+                        <p>Estamos preparando un video profesional de alta calidad</p>
                       </div>
                     </div>
                   </div>
@@ -402,10 +454,10 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
                   <p className="text-xl text-gray-600 mb-10">
                     Prueba POS Pro gratis por 30 días. Sin tarjeta de crédito, sin compromiso.
                   </p>
-                  
+
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <Button 
-                      variant="success" 
+                    <Button
+                      variant="success"
                       size="xl"
                       onClick={() => navigate('/register')}
                       className="px-12 py-4 text-lg font-bold"
@@ -413,8 +465,8 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
                       Comenzar Prueba Gratis
                       <IconArrowRight size={20} className="ml-2" />
                     </Button>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="xl"
                       onClick={() => navigate('/pricing')}
                       className="px-12 py-4 text-lg"
@@ -422,7 +474,7 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
                       Ver Planes y Precios
                     </Button>
                   </div>
-                  
+
                   <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm text-gray-500">
                     <div className="flex items-center">
                       <IconCheck className="text-success-500 mr-2" size={16} />
@@ -442,7 +494,7 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
             </div>
           </section>
         </main>
-        
+
         <Footer />
       </div>
     </div>
