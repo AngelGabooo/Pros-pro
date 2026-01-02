@@ -78,7 +78,7 @@ const Profile = ({ isAuthenticated, user, onLogout }) => {
       sucursal: userData.sucursal || 'Principal',
       usuario: userData.usuario || 'usuario',
       fechaRegistro: userData.fechaRegistro || new Date().toISOString(),
-      ultimoAcceso: new Date().toLocaleString('es-PE'),
+      ultimoAcceso: new Date().toLocaleString('es-MX'),
       turno: determinarTurno(),
       permisos: determinarPermisos(userData.cargo),
       activo: true,
@@ -88,7 +88,7 @@ const Profile = ({ isAuthenticated, user, onLogout }) => {
         numeroCuenta: userData.numeroCuenta || '',
         cci: userData.cci || '',
         titularCuenta: userData.titularCuenta || '',
-        monedaCuenta: userData.monedaCuenta || 'PEN'
+        monedaCuenta: userData.monedaCuenta || 'MXN'
       },
       // === DATOS DE LA TIENDA ===
       tiendaNombre: userData.tiendaNombre || 'Mi Tienda',
@@ -188,7 +188,7 @@ const Profile = ({ isAuthenticated, user, onLogout }) => {
         numeroCuenta: bankEditData.numeroCuenta || '',
         cci: bankEditData.cci || '',
         titularCuenta: bankEditData.titularCuenta || '',
-        monedaCuenta: bankEditData.monedaCuenta || 'PEN',
+        monedaCuenta: bankEditData.monedaCuenta || 'MXN',
         // === DATOS DE LA TIENDA ===
         tiendaNombre: editData.tiendaNombre?.trim() || 'Mi Tienda',
         tiendaDireccion: editData.tiendaDireccion?.trim() || '',
@@ -216,14 +216,14 @@ const Profile = ({ isAuthenticated, user, onLogout }) => {
             numeroCuenta: result.user.numeroCuenta || '',
             cci: result.user.cci || '',
             titularCuenta: result.user.titularCuenta || '',
-            monedaCuenta: result.user.monedaCuenta || 'PEN'
+            monedaCuenta: result.user.monedaCuenta || 'MXN'
           },
           tiendaNombre: result.user.tiendaNombre || 'Mi Tienda',
           tiendaDireccion: result.user.tiendaDireccion || '',
           tiendaTelefono: result.user.tiendaTelefono || '',
           tiendaRFC: result.user.tiendaRFC || '',
           tiendaMensajeTicket: result.user.tiendaMensajeTicket || '¡Gracias por su compra! Vuelva pronto :)',
-          ultimoAcceso: new Date().toLocaleString('es-PE')
+          ultimoAcceso: new Date().toLocaleString('es-MX')
         };
         
         setProfileData(updatedProfile);
@@ -289,18 +289,37 @@ const Profile = ({ isAuthenticated, user, onLogout }) => {
   const formatDate = (dateString) => {
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString('es-PE', { year: 'numeric', month: 'long', day: 'numeric' });
+      return date.toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
     } catch {
       return 'Fecha no disponible';
     }
   };
 
-  const bancosPeru = [
-    'BCP', 'BBVA', 'Interbank', 'Scotiabank', 'BanBif',
-    'Banco de la Nación', 'Banco Pichincha', 'Banco GNB',
-    'Banco Falabella', 'Banco Ripley', 'Banco Azteca',
-    'MiBanco', 'Caja Huancayo', 'Caja Arequipa',
-    'Caja Sullana', 'Caja Trujillo', 'Caja Piura', 'Caja Ica'
+  // BANCOS MEXICANOS - Lista actualizada
+  const bancosMexico = [
+    'BBVA México',
+    'Banorte',
+    'Santander México',
+    'Citibanamex',
+    'HSBC México',
+    'Scotiabank México',
+    'Banco Azteca',
+    'BanCoppel',
+    'BanRegio',
+    'Inbursa',
+    'BanBajío',
+    'Monex',
+    'Banco del Bajío',
+    'Banco Multiva',
+    'Afirme',
+    'Intercam Banco',
+    'CI Banco',
+    'Banco Actinver',
+    'Bank of America México',
+    'JP Morgan México',
+    'Mizuho Bank',
+    'Bank of China',
+    'Deutsche Bank México'
   ];
 
   if (loading && !profileData) {
@@ -440,7 +459,7 @@ const Profile = ({ isAuthenticated, user, onLogout }) => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
                     {isEditing ? (
-                      <Input type="tel" name="telefono" value={editData.telefono || ''} onChange={handleInputChange} placeholder="+51 987654321" icon={IconPhone} />
+                      <Input type="tel" name="telefono" value={editData.telefono || ''} onChange={handleInputChange} placeholder="+52 55 1234 5678" icon={IconPhone} />
                     ) : (
                       <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                         <IconPhone className="text-gray-400 mr-3" size={20} />
@@ -588,7 +607,7 @@ const Profile = ({ isAuthenticated, user, onLogout }) => {
                                 className="w-full px-4 py-3 pl-10 rounded-lg border border-gray-300 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                               >
                                 <option value="">Seleccionar banco</option>
-                                {bancosPeru.map((banco) => (
+                                {bancosMexico.map((banco) => (
                                   <option key={banco} value={banco}>{banco}</option>
                                 ))}
                               </select>
@@ -639,7 +658,7 @@ const Profile = ({ isAuthenticated, user, onLogout }) => {
                               name="numeroCuenta"
                               value={bankEditData.numeroCuenta || ''}
                               onChange={handleBankInputChange}
-                              placeholder="Ej: 191-12345678-0-12"
+                              placeholder="Ej: 012345678901234567"
                               icon={IconCreditCard}
                             />
                           ) : (
@@ -652,14 +671,14 @@ const Profile = ({ isAuthenticated, user, onLogout }) => {
                           )}
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">CCI (Código Interbancario)</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">CLABE Interbancaria</label>
                           {isEditing ? (
                             <Input
                               type="text"
                               name="cci"
                               value={bankEditData.cci || ''}
                               onChange={handleBankInputChange}
-                              placeholder="Ej: 00219100123456789012"
+                              placeholder="Ej: 012180000123456789"
                               icon={IconId}
                             />
                           ) : (
@@ -698,12 +717,11 @@ const Profile = ({ isAuthenticated, user, onLogout }) => {
                           <div className="relative">
                             <select
                               name="monedaCuenta"
-                              value={bankEditData.monedaCuenta || 'PEN'}
+                              value={bankEditData.monedaCuenta || 'MXN'}
                               onChange={handleBankInputChange}
                               className="w-full px-4 py-3 pl-10 rounded-lg border border-gray-300 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                             >
-                              <option value="PEN">Soles (PEN)</option>
-                              <option value="USD">Dólares (USD)</option>
+                              <option value="MXN">Pesos Mexicanos (MXN)</option>
                             </select>
                             <IconCurrencyDollar className="absolute left-3 top-3.5 text-gray-400" size={20} />
                           </div>
@@ -711,7 +729,7 @@ const Profile = ({ isAuthenticated, user, onLogout }) => {
                           <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                             <IconCurrencyDollar className="text-gray-400 mr-3" size={20} />
                             <span className="font-medium">
-                              {profileData.datosBancarios?.monedaCuenta || 'PEN'}
+                              Pesos Mexicanos (MXN)
                             </span>
                           </div>
                         )}
