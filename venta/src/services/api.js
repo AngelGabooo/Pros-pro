@@ -1,9 +1,9 @@
-// src/services/api.js
+// src/services/api.js - VERSIÓN CORREGIDA
 
 // ==================== CONFIGURACIÓN DE URL DEL BACKEND ====================
 // En desarrollo: localhost
-// En producción: la URL de tu backend desplegado (Render, Railway, etc.)
-const API_BASE_URL = import.meta.env.VITE_API_URL?.trim() || 'http://localhost:5000/api';
+// En producción: la URL de tu backend desplegado en Vercel
+const API_BASE_URL = import.meta.env.VITE_API_URL?.trim() || 'https://pros-pro-api.vercel.app/api';
 
 // Eliminar barra final si existe, para evitar duplicados
 const API_URL = API_BASE_URL.endsWith('/') 
@@ -14,7 +14,7 @@ console.log('🌍 API Base URL configurada:', API_URL);
 
 // ==================== HELPER PARA OBTENER TOKEN ====================
 const getToken = () => {
-  return localStorage.getItem('token');
+  return localStorage.getItem('auth_token') || localStorage.getItem('token');
 };
 
 // ==================== HELPER PRINCIPAL DE FETCH ====================
@@ -130,11 +130,18 @@ export const authService = {
       if (data.success && data.token && data.user) {
         console.log('✅ Login exitoso:', data.user.usuario);
         
-        // Guardar en localStorage
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        // Guardar en localStorage con nombres consistentes
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('auth_user', JSON.stringify(data.user));
+        localStorage.setItem('token', data.token); // Backup por compatibilidad
+        localStorage.setItem('user', JSON.stringify(data.user)); // Backup por compatibilidad
         localStorage.setItem('tienda', data.user.databaseName || '');
         localStorage.setItem('lastLogin', new Date().toISOString());
+        
+        // Disparar evento para notificar a App.jsx
+        window.dispatchEvent(new CustomEvent('userLogin', {
+          detail: { user: data.user }
+        }));
       }
 
       return data;
@@ -149,29 +156,35 @@ export const authService = {
    */
   logout() {
     console.log('👋 Realizando logout...');
+    
+    // Limpiar todo el localStorage de forma exhaustiva
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('tienda');
     localStorage.removeItem('lastLogin');
     localStorage.removeItem('bankData');
-
-    // Redirigir solo si no estamos ya en login
-    if (!window.location.pathname.includes('/login')) {
-      window.location.href = '/login';
-    }
+    localStorage.removeItem('pos_recent_products');
+    localStorage.removeItem('pos_sale_counter');
+    localStorage.removeItem('pos_notifications');
+    
+    // Disparar evento para notificar a App.jsx
+    window.dispatchEvent(new CustomEvent('userLogout'));
   },
 
   /**
    * Verificar si está autenticado
    */
   isAuthenticated() {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    const user = localStorage.getItem('auth_user') || localStorage.getItem('user');
+    
     if (!token || !user) return false;
 
     try {
       const userData = JSON.parse(user);
-      return !!userData.id && !!userData.usuario;
+      return !!(token && userData && userData.id && userData.usuario);
     } catch {
       return false;
     }
@@ -182,7 +195,8 @@ export const authService = {
    */
   getCurrentUser() {
     try {
-      const userStr = localStorage.getItem('user');
+      // Intentar con auth_user primero, luego con user por compatibilidad
+      const userStr = localStorage.getItem('auth_user') || localStorage.getItem('user');
       return userStr ? JSON.parse(userStr) : null;
     } catch (error) {
       console.error('❌ Error leyendo usuario de localStorage:', error);
@@ -194,7 +208,8 @@ export const authService = {
    * Obtener nombre de la tienda actual
    */
   getCurrentTienda() {
-    return localStorage.getItem('tienda') || null;
+    const user = this.getCurrentUser();
+    return user?.databaseName || localStorage.getItem('tienda') || null;
   },
 
   /**
@@ -242,7 +257,13 @@ export const authService = {
           tiendaMensajeTicket: userData.tiendaMensajeTicket ?? currentUser.tiendaMensajeTicket ?? '¡Gracias por su compra! Vuelva pronto :)'
         };
 
+        // Actualizar en ambos lugares por compatibilidad
+        localStorage.setItem('auth_user', JSON.stringify(updatedUser));
         localStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        // Disparar evento para notificar a App.jsx
+        window.dispatchEvent(new CustomEvent('userUpdated'));
+        
         console.log('✅ Perfil actualizado correctamente');
       }
 
@@ -280,6 +301,8 @@ export const authService = {
       const data = await fetchAPI('/profile');
       
       if (data.success && data.user) {
+        // Actualizar en ambos lugares por compatibilidad
+        localStorage.setItem('auth_user', JSON.stringify(data.user));
         localStorage.setItem('user', JSON.stringify(data.user));
         console.log('✅ Perfil sincronizado');
       }
@@ -287,6 +310,203 @@ export const authService = {
       return data;
     } catch (error) {
       console.error('❌ Error obteniendo perfil:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Guardar token manualmente (para compatibilidad)
+   */
+  saveToken(token) {
+    localStorage.setItem('auth_token', token);
+    localStorage.setItem('token', token); // Backup
+  },
+
+  /**
+   * Guardar usuario manualmente (para compatibilidad)
+   */
+  saveUser(user) {
+    localStorage.setItem('auth_user', JSON.stringify(user));
+    localStorage.setItem('user', JSON.stringify(user)); // Backup
+  }
+};
+
+// ==================== SERVICIO DE PRODUCTOS ====================
+export const productService = {
+  async getAll() {
+    try {
+      const data = await fetchAPI('/products');
+      return data;
+    } catch (error) {
+      console.error('❌ Error obteniendo productos:', error);
+      throw error;
+    }
+  },
+
+  async create(productData) {
+    try {
+      const data = await fetchAPI('/products', {
+        method: 'POST',
+        body: JSON.stringify(productData),
+      });
+      return data;
+    } catch (error) {
+      console.error('❌ Error creando producto:', error);
+      throw error;
+    }
+  },
+
+  async update(id, productData) {
+    try {
+      const data = await fetchAPI(`/products/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(productData),
+      });
+      return data;
+    } catch (error) {
+      console.error('❌ Error actualizando producto:', error);
+      throw error;
+    }
+  },
+
+  async delete(id) {
+    try {
+      const data = await fetchAPI(`/products/${id}`, {
+        method: 'DELETE',
+      });
+      return data;
+    } catch (error) {
+      console.error('❌ Error eliminando producto:', error);
+      throw error;
+    }
+  },
+
+  async updateStock(id, stock) {
+    try {
+      const data = await fetchAPI(`/products/${id}/stock`, {
+        method: 'PUT',
+        body: JSON.stringify({ stock }),
+      });
+      return data;
+    } catch (error) {
+      console.error('❌ Error actualizando stock:', error);
+      throw error;
+    }
+  }
+};
+
+// ==================== SERVICIO DE VENTAS ====================
+export const saleService = {
+  async create(saleData) {
+    try {
+      const data = await fetchAPI('/sales', {
+        method: 'POST',
+        body: JSON.stringify(saleData),
+      });
+      return data;
+    } catch (error) {
+      console.error('❌ Error creando venta:', error);
+      throw error;
+    }
+  },
+
+  async getAll() {
+    try {
+      const data = await fetchAPI('/sales');
+      return data;
+    } catch (error) {
+      console.error('❌ Error obteniendo ventas:', error);
+      throw error;
+    }
+  },
+
+  async getToday() {
+    try {
+      const data = await fetchAPI('/sales/today');
+      return data;
+    } catch (error) {
+      console.error('❌ Error obteniendo ventas de hoy:', error);
+      throw error;
+    }
+  },
+
+  async getStats() {
+    try {
+      const data = await fetchAPI('/sales/stats');
+      return data;
+    } catch (error) {
+      console.error('❌ Error obteniendo estadísticas:', error);
+      throw error;
+    }
+  }
+};
+
+// ==================== SERVICIO DE DASHBOARD ====================
+export const dashboardService = {
+  async getStats() {
+    try {
+      const data = await fetchAPI('/dashboard/stats');
+      return data;
+    } catch (error) {
+      console.error('❌ Error obteniendo estadísticas del dashboard:', error);
+      throw error;
+    }
+  },
+
+  async getAlertas() {
+    try {
+      const data = await fetchAPI('/dashboard/alertas');
+      return data;
+    } catch (error) {
+      console.error('❌ Error obteniendo alertas:', error);
+      throw error;
+    }
+  },
+
+  async getMetodosPago(periodo = 'hoy') {
+    try {
+      const data = await fetchAPI(`/dashboard/metodos-pago?periodo=${periodo}`);
+      return data;
+    } catch (error) {
+      console.error('❌ Error obteniendo métodos de pago:', error);
+      throw error;
+    }
+  }
+};
+
+// ==================== SERVICIO DE REPORTES ====================
+export const reportService = {
+  async generateSalesReport(reportData) {
+    try {
+      // Aquí implementarías la lógica para generar el reporte
+      console.log('📊 Generando reporte de ventas:', reportData);
+      
+      // Esto es un placeholder - deberías implementar según tu backend
+      const data = await fetchAPI('/sales/report/daily', {
+        method: 'POST',
+        body: JSON.stringify(reportData),
+      });
+      
+      return data;
+    } catch (error) {
+      console.error('❌ Error generando reporte:', error);
+      throw error;
+    }
+  },
+
+  async generateDetailedReport(reportData) {
+    try {
+      console.log('📋 Generando reporte detallado:', reportData);
+      
+      // Esto es un placeholder - deberías implementar según tu backend
+      const data = await fetchAPI('/sales/report/detailed', {
+        method: 'POST',
+        body: JSON.stringify(reportData),
+      });
+      
+      return data;
+    } catch (error) {
+      console.error('❌ Error generando reporte detallado:', error);
       throw error;
     }
   }
