@@ -1,67 +1,95 @@
 // src/services/api.js
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-// Helper para obtener el token
+
+// ==================== CONFIGURACIÓN DE URL DEL BACKEND ====================
+// En desarrollo: localhost
+// En producción: la URL de tu backend desplegado (Render, Railway, etc.)
+const API_BASE_URL = import.meta.env.VITE_API_URL?.trim() || 'http://localhost:5000/api';
+
+// Eliminar barra final si existe, para evitar duplicados
+const API_URL = API_BASE_URL.endsWith('/') 
+  ? API_BASE_URL.slice(0, -1) 
+  : API_BASE_URL;
+
+console.log('🌍 API Base URL configurada:', API_URL);
+
+// ==================== HELPER PARA OBTENER TOKEN ====================
 const getToken = () => {
   return localStorage.getItem('token');
 };
 
-// Helper para hacer peticiones
+// ==================== HELPER PRINCIPAL DE FETCH ====================
 const fetchAPI = async (endpoint, options = {}) => {
   const token = getToken();
-
+  
+  // Asegurar que el endpoint empiece con /
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  
   const headers = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     ...options.headers,
   };
 
-  if (token && !endpoint.includes('/register') && !endpoint.includes('/login')) {
+  // Agregar token solo si NO es registro o login
+  if (token && !cleanEndpoint.includes('/register') && !cleanEndpoint.includes('/login')) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  console.log(`📡 API Request: ${endpoint}`, { method: options.method || 'GET' });
+  console.log(`📡 API Request: ${cleanEndpoint}`, { 
+    method: options.method || 'GET',
+    url: `${API_URL}${cleanEndpoint}`
+  });
 
   try {
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const response = await fetch(`${API_URL}${cleanEndpoint}`, {
       ...options,
       headers,
-      credentials: 'include'
+      credentials: 'include', // Necesario para cookies si usas sesiones (opcional)
     });
-    const contentType = response.headers.get('content-type');
 
-    // Verificar si la respuesta es JSON
+    // Manejar respuestas no JSON (errores del servidor, HTML, etc.)
+    const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
       const text = await response.text();
-      throw new Error(`Respuesta no válida del servidor: ${text.substring(0, 100)}`);
+      console.error('❌ Respuesta no JSON del servidor:', text.substring(0, 200));
+      throw {
+        status: response.status,
+        message: 'Respuesta inválida del servidor (no JSON)',
+        data: text
+      };
     }
+
     const data = await response.json();
 
     if (!response.ok) {
       console.error(`❌ API Error ${response.status}:`, data);
       throw {
         status: response.status,
-        message: data.error || 'Error del servidor',
+        message: data.error || data.message || 'Error desconocido del servidor',
         data
       };
     }
 
     return data;
   } catch (error) {
-    console.error(`❌ Fetch error para ${endpoint}:`, error);
+    console.error(`❌ Fetch error para ${cleanEndpoint}:`, error);
 
-    // Si es un error de red
+    // Error de conexión (servidor apagado, CORS, etc.)
     if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
       throw {
         status: 0,
-        message: 'No se pudo conectar al servidor. Verifica que esté corriendo en http://localhost:5000',
-        data: null
+        message: 'No se pudo conectar al servidor. Verifica tu conexión a internet o que el backend esté activo.',
+        data: null,
+        isOffline: true
       };
     }
 
+    // Otros errores (JSON mal formado, etc.)
     throw error;
   }
 };
 
+// ==================== SERVICIO DE AUTENTICACIÓN ====================
 export const authService = {
   /**
    * Registro de nuevo usuario
@@ -69,18 +97,18 @@ export const authService = {
   async register(userData) {
     try {
       console.log('👤 Registrando nuevo usuario...', { usuario: userData.usuario });
-
+      console.log('📦 Enviando datos de registro real al backend:', userData);
+      
       const data = await fetchAPI('/register', {
         method: 'POST',
         body: JSON.stringify(userData),
       });
-
-      console.log('✅ Usuario registrado exitosamente');
-
+      
+      console.log('✅ Usuario registrado exitosamente:', data);
       return data;
     } catch (error) {
       console.error('❌ Error en registro:', error);
-      throw error || { error: 'Error de conexión' };
+      throw error || { error: 'Error de conexión al registrar' };
     }
   },
 
@@ -90,7 +118,7 @@ export const authService = {
   async login(credentials) {
     try {
       console.log('🔐 Intentando login...', { username: credentials.username });
-
+      
       const data = await fetchAPI('/login', {
         method: 'POST',
         body: JSON.stringify({
@@ -101,20 +129,18 @@ export const authService = {
 
       if (data.success && data.token && data.user) {
         console.log('✅ Login exitoso:', data.user.usuario);
-
-        // Guardar token y usuario en localStorage
+        
+        // Guardar en localStorage
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-
-        // Guardar también información adicional para debug
-        localStorage.setItem('tienda', data.user.databaseName);
+        localStorage.setItem('tienda', data.user.databaseName || '');
         localStorage.setItem('lastLogin', new Date().toISOString());
       }
 
       return data;
     } catch (error) {
       console.error('❌ Error en login:', error);
-      throw error || { error: 'Error de conexión' };
+      throw error || { error: 'Error de conexión al iniciar sesión' };
     }
   },
 
@@ -123,16 +149,14 @@ export const authService = {
    */
   logout() {
     console.log('👋 Realizando logout...');
-
-    // Limpiar localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('tienda');
     localStorage.removeItem('lastLogin');
-    localStorage.removeItem('bankData'); // opcional: limpiar también datos bancarios
+    localStorage.removeItem('bankData');
 
-    // Opcional: redirigir a login
-    if (window.location.pathname !== '/login') {
+    // Redirigir solo si no estamos ya en login
+    if (!window.location.pathname.includes('/login')) {
       window.location.href = '/login';
     }
   },
@@ -143,47 +167,34 @@ export const authService = {
   isAuthenticated() {
     const token = localStorage.getItem('token');
     const user = localStorage.getItem('user');
+    if (!token || !user) return false;
 
-    if (!token || !user) {
-      return false;
-    }
-
-    // Verificación básica
     try {
       const userData = JSON.parse(user);
-      return !!userData.id;
+      return !!userData.id && !!userData.usuario;
     } catch {
       return false;
     }
   },
 
   /**
-   * Obtener usuario actual desde localStorage
+   * Obtener usuario actual
    */
   getCurrentUser() {
     try {
       const userStr = localStorage.getItem('user');
-      if (!userStr) return null;
-
-      const user = JSON.parse(userStr);
-      return user;
+      return userStr ? JSON.parse(userStr) : null;
     } catch (error) {
-      console.error('❌ Error al leer usuario de localStorage:', error);
+      console.error('❌ Error leyendo usuario de localStorage:', error);
       return null;
     }
   },
 
   /**
-   * Obtener información de la tienda actual
+   * Obtener nombre de la tienda actual
    */
   getCurrentTienda() {
-    try {
-      const tienda = localStorage.getItem('tienda');
-      return tienda || null;
-    } catch (error) {
-      console.error('❌ Error al leer tienda:', error);
-      return null;
-    }
+    return localStorage.getItem('tienda') || null;
   },
 
   /**
@@ -193,113 +204,93 @@ export const authService = {
     try {
       const token = getToken();
       if (!token) {
-        return { success: false, error: 'No autenticado' };
+        return { success: false, error: 'No hay token' };
       }
-      const response = await fetchAPI('/debug/check-auth', {
-        method: 'GET'
-      });
+
+      const response = await fetchAPI('/debug/check-auth');
       return response;
     } catch (error) {
       console.error('❌ Error verificando sesión:', error);
       return {
         success: false,
-        error: error.message || 'Error de autenticación'
+        error: error.message || 'Sesión inválida o expirada'
       };
     }
   },
 
   /**
-   * Actualizar información del perfil del usuario en el servidor
+   * Actualizar perfil en el servidor y localStorage
    */
   async updateUserInfo(userData) {
     try {
-      console.log('🔄 Enviando actualización de perfil al servidor...', userData);
-
+      console.log('🔄 Actualizando perfil...', userData);
+      
       const data = await fetchAPI('/profile/update', {
         method: 'PUT',
         body: JSON.stringify(userData),
       });
 
       if (data.success && data.user) {
-        console.log('✅ Perfil actualizado en el servidor y en localStorage');
-
-        // Obtener usuario actual para preservar campos que no vengan en la respuesta
         const currentUser = this.getCurrentUser() || {};
-
         const updatedUser = {
           ...currentUser,
           ...data.user,
-          // Conservar/actualizar datos específicos de la tienda
-          tiendaNombre: userData.tiendaNombre ?? currentUser.tiendaNombre,
+          tiendaNombre: userData.tiendaNombre ?? currentUser.tiendaNombre ?? 'Mi Tienda',
           tiendaDireccion: userData.tiendaDireccion ?? currentUser.tiendaDireccion,
           tiendaTelefono: userData.tiendaTelefono ?? currentUser.tiendaTelefono,
           tiendaRFC: userData.tiendaRFC ?? currentUser.tiendaRFC,
-          tiendaMensajeTicket: userData.tiendaMensajeTicket ?? currentUser.tiendaMensajeTicket
+          tiendaMensajeTicket: userData.tiendaMensajeTicket ?? currentUser.tiendaMensajeTicket ?? '¡Gracias por su compra! Vuelva pronto :)'
         };
 
         localStorage.setItem('user', JSON.stringify(updatedUser));
-
-        // Guardar datos bancarios por separado si se enviaron
-        if (userData.banco || userData.tipoCuenta || userData.numeroCuenta) {
-          localStorage.setItem('bankData', JSON.stringify({
-            banco: userData.banco,
-            tipoCuenta: userData.tipoCuenta,
-            numeroCuenta: userData.numeroCuenta,
-            cci: userData.cci,
-            titularCuenta: userData.titularCuenta,
-            monedaCuenta: userData.monedaCuenta
-          }));
-        }
+        console.log('✅ Perfil actualizado correctamente');
       }
 
       return data;
     } catch (error) {
       console.error('❌ Error actualizando perfil:', error);
-      throw error || { error: 'Error de conexión' };
+      throw error || { error: 'Error al actualizar perfil' };
     }
   },
 
   /**
-   * Cambiar contraseña
+   * Cambiar contraseña (si tienes esta ruta en el backend)
    */
   async changePassword(passwordData) {
     try {
       console.log('🔑 Cambiando contraseña...');
-
       const data = await fetchAPI('/profile/change-password', {
         method: 'PUT',
         body: JSON.stringify(passwordData),
       });
-
-      console.log('✅ Contraseña cambiada exitosamente');
+      console.log('✅ Contraseña cambiada');
       return data;
     } catch (error) {
       console.error('❌ Error cambiando contraseña:', error);
-      throw error || { error: 'Error de conexión' };
+      throw error;
     }
   },
 
   /**
-   * Obtener perfil actualizado desde el servidor
+   * Obtener perfil fresco del servidor
    */
   async getProfile() {
     try {
-      console.log('📥 Obteniendo perfil actualizado del servidor...');
-
+      console.log('📥 Obteniendo perfil del servidor...');
       const data = await fetchAPI('/profile');
-
+      
       if (data.success && data.user) {
         localStorage.setItem('user', JSON.stringify(data.user));
-        console.log('✅ Perfil sincronizado con el servidor');
+        console.log('✅ Perfil sincronizado');
       }
-
+      
       return data;
     } catch (error) {
       console.error('❌ Error obteniendo perfil:', error);
-      throw error || { error: 'No autorizado' };
+      throw error;
     }
   }
 };
 
-// Exportar helper fetchAPI para uso en otros servicios
-export { fetchAPI };
+// Exportar también el helper para otros servicios (productos, ventas, etc.)
+export { fetchAPI, API_URL };

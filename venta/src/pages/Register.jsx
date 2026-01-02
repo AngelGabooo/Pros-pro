@@ -1,4 +1,4 @@
-// src/pages/Register.jsx CORREGIDO
+// src/pages/Register.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/organisms/Header';
@@ -6,7 +6,7 @@ import AuthContainer from '../components/organisms/AuthContainer';
 import Footer from '../components/organisms/Footer';
 import { authService } from '../services/api';
 
-const Register = () => { // <-- Remover { onLogin } de las props
+const Register = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [authMode, setAuthMode] = useState('register');
   const [loading, setLoading] = useState(false);
@@ -27,31 +27,28 @@ const Register = () => { // <-- Remover { onLogin } de las props
     setLoading(true);
     setError(null);
     setSuccess(null);
-    
+
     try {
       console.log('📤 Enviando datos de registro real al backend:', formData);
-      
-      // Preparar datos EXACTAMENTE como los espera el backend
+
       const userData = {
         nombre: formData.nombre.trim(),
         apellido: formData.apellido.trim(),
-        email: formData.email?.trim() || `${formData.usuario}@tienda.com`,
+        email: formData.email?.trim() || `${formData.usuario.trim()}@tienda.com`,
         telefono: formData.telefono?.trim() || '',
         cargo: formData.cargo,
         usuario: formData.usuario.trim(),
         password: formData.password
       };
-      
+
       console.log('📦 Datos estructurados para backend:', userData);
-      
-      // LLAMADA REAL AL BACKEND
+
       const result = await authService.register(userData);
-      
+
       if (result.success) {
         console.log('✅ Registro exitoso:', result);
-        setSuccess('¡Usuario registrado exitosamente! Ahora puedes iniciar sesión.');
-        
-        // Cambiar automáticamente a modo login después de 2 segundos
+        setSuccess('¡Usuario registrado exitosamente! Cambiando a login...');
+
         setTimeout(() => {
           setAuthMode('login');
           setSuccess(null);
@@ -59,16 +56,16 @@ const Register = () => { // <-- Remover { onLogin } de las props
       }
     } catch (error) {
       console.error('❌ Error completo en registro:', error);
-      
+
       let errorMessage = 'Error al registrar usuario';
-      if (error.error?.includes('Usuario o email ya existe')) {
-        errorMessage = 'El nombre de usuario ya está en uso. Intenta con otro.';
+      if (error.error?.includes('ya existe') || error.message?.includes('ya existe')) {
+        errorMessage = 'El nombre de usuario o email ya está en uso. Intenta con otro.';
       } else if (error.error) {
         errorMessage = error.error;
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -78,27 +75,17 @@ const Register = () => { // <-- Remover { onLogin } de las props
   const handleLoginSubmit = async (formData) => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      console.log('📤 Intentando login...');
+      console.log('📤 Intentando login desde página de registro...');
       const result = await authService.login({
-        username: formData.username,
+        username: formData.username.trim(),
         password: formData.password
       });
-      
+
       if (result.success) {
-        console.log('✅ Login exitoso');
-        
-        // En lugar de llamar a onLogin, actualiza localStorage y redirige
-        // El estado de autenticación se manejará en App.js
-        localStorage.setItem('token', result.token);
-        localStorage.setItem('user', JSON.stringify(result.user));
-        
-        // Redirigir al POS
+        console.log('✅ Login exitoso desde registro');
         navigate('/pos');
-        
-        // Opcional: Recargar la página para que App.js detecte el cambio
-        // window.location.reload();
       }
     } catch (error) {
       console.error('❌ Error en login:', error);
@@ -116,7 +103,7 @@ const Register = () => { // <-- Remover { onLogin } de las props
           onThemeToggle={handleThemeToggle}
           darkMode={darkMode}
         />
-        
+
         <main className="flex-grow">
           <AuthContainer
             mode={authMode}
@@ -128,7 +115,7 @@ const Register = () => { // <-- Remover { onLogin } de las props
             success={success}
           />
         </main>
-        
+
         <Footer darkMode={darkMode} />
       </div>
     </div>

@@ -1,188 +1,166 @@
-// services/saleService.js
-const API_URL = 'http://localhost:5000/api';
+// src/services/saleService.js
 
-const handleResponse = async (response) => {
-  const contentType = response.headers.get('content-type');
-  
-  if (!contentType || !contentType.includes('application/json')) {
-    const text = await response.text();
-    throw new Error(`Respuesta inválida del servidor: ${text.substring(0, 100)}`);
-  }
+import { fetchAPI } from './api.js';  // ← Usamos el sistema centralizado de API
 
-  const data = await response.json();
-  
-  if (!response.ok) {
-    console.error('❌ Error del servidor:', {
-      status: response.status,
-      statusText: response.statusText,
-      data
-    });
-    
-    const error = new Error(data.error || `Error ${response.status}: ${response.statusText}`);
-    error.status = response.status;
-    error.data = data;
-    throw error;
-  }
-  
-  return data;
-};
+/**
+ * Servicio para gestión de ventas
+ * Integrado con el fetchAPI central para URL dinámica y manejo de token
+ */
 
 export const saleService = {
+  /**
+   * Crear una nueva venta
+   */
   async create(saleData) {
     try {
       console.log('💰 SaleService: Creando venta...', saleData);
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        throw new Error('No autenticado. Por favor, inicia sesión.');
-      }
 
-      const response = await fetch(`${API_URL}/sales`, {
+      const data = await fetchAPI('/sales', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify(saleData)
       });
 
-      const data = await handleResponse(response);
-      
-      console.log('✅ Venta creada exitosamente:', data.code);
-      
+      console.log('✅ Venta creada exitosamente:', data.code || data.venta?.codigo);
+
       return {
         success: true,
         venta: data.venta,
-        code: data.code,
-        message: data.message
+        code: data.code || data.venta?.codigo,
+        message: data.message || 'Venta registrada exitosamente'
       };
-      
     } catch (error) {
       console.error('❌ Error en saleService.create:', error);
-      
+
+      let message = error.message || 'Error al registrar la venta';
+
+      if (error.status === 400) {
+        message = 'Datos de venta inválidos. Verifica los productos y montos.';
+      } else if (error.status === 401) {
+        message = 'Sesión expirada. Por favor, inicia sesión nuevamente.';
+      } else if (error.isOffline || error.status === 0) {
+        message = 'No se pudo conectar al servidor. Verifica tu conexión.';
+      }
+
       throw {
-        error: error.message || 'Error en la venta',
+        error: message,
         status: error.status,
-        details: error.data?.details
+        details: error.data?.details || error.details
       };
     }
   },
 
+  /**
+   * Obtener todas las ventas con filtros opcionales (paginación, fechas, etc.)
+   */
   async getAll(params = {}) {
     try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        throw new Error('No autenticado. Por favor, inicia sesión.');
+      console.log('📋 SaleService: Obteniendo ventas con filtros...', params);
+
+      let endpoint = '/sales';
+      if (Object.keys(params).length > 0) {
+        const query = new URLSearchParams(params).toString();
+        endpoint += `?${query}`;
       }
 
-      const queryParams = new URLSearchParams(params).toString();
-      const url = `${API_URL}/sales${queryParams ? `?${queryParams}` : ''}`;
-      
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const data = await fetchAPI(endpoint);
 
-      const data = await handleResponse(response);
-      
       return {
         success: true,
         ventas: data.ventas || [],
-        paginacion: data.paginacion,
-        estadisticas: data.estadisticas
+        paginacion: data.paginacion || {},
+        estadisticas: data.estadisticas || {}
       };
-      
     } catch (error) {
       console.error('❌ Error en saleService.getAll:', error);
-      throw error;
+
+      let message = error.message || 'Error al cargar las ventas';
+
+      if (error.status === 401) {
+        message = 'Sesión expirada. Inicia sesión nuevamente.';
+      }
+
+      throw {
+        error: message,
+        status: error.status
+      };
     }
   },
 
+  /**
+   * Obtener ventas del día actual
+   */
   async getToday() {
     try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        throw new Error('No autenticado. Por favor, inicia sesión.');
-      }
+      console.log('📅 SaleService: Obteniendo ventas de hoy...');
 
-      const response = await fetch(`${API_URL}/sales/today`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const data = await fetchAPI('/sales/today');
 
-      const data = await handleResponse(response);
-      
       return {
         success: true,
         ventas: data.ventas || [],
-        estadisticas: data.estadisticas
+        estadisticas: data.estadisticas || {}
       };
-      
     } catch (error) {
       console.error('❌ Error en saleService.getToday:', error);
       throw error;
     }
   },
 
+  /**
+   * Obtener estadísticas generales de ventas
+   */
   async getStats() {
     try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        throw new Error('No autenticado. Por favor, inicia sesión.');
-      }
+      console.log('📊 SaleService: Obteniendo estadísticas de ventas...');
 
-      const response = await fetch(`${API_URL}/sales/stats`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const data = await fetchAPI('/sales/stats');
 
-      const data = await handleResponse(response);
-      
       return {
         success: true,
-        estadisticas: data.estadisticas
+        estadisticas: data.estadisticas || {}
       };
-      
     } catch (error) {
       console.error('❌ Error en saleService.getStats:', error);
       throw error;
     }
   },
 
-  async cancelSale(id, motivo) {
+  /**
+   * Anular/cancelar una venta
+   */
+  async cancelSale(id, motivo = '') {
     try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        throw new Error('No autenticado. Por favor, inicia sesión.');
-      }
+      console.log(`❌ SaleService: Cancelando venta ${id}...`, { motivo });
 
-      const response = await fetch(`${API_URL}/sales/${id}/cancel`, {
+      const data = await fetchAPI(`/sales/${id}/cancel`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify({ motivo })
       });
 
-      const data = await handleResponse(response);
-      
+      console.log(`✅ Venta ${id} cancelada correctamente`);
+
       return {
         success: true,
         venta: data.venta,
-        message: data.message
+        message: data.message || 'Venta cancelada exitosamente'
       };
-      
     } catch (error) {
       console.error('❌ Error en saleService.cancelSale:', error);
-      throw error;
+
+      let message = error.message || 'Error al cancelar la venta';
+
+      if (error.status === 404) {
+        message = 'Venta no encontrada';
+      } else if (error.status === 400) {
+        message = 'La venta ya está cancelada o no se puede anular';
+      }
+
+      throw {
+        error: message,
+        status: error.status
+      };
     }
   }
 };
+
+export default saleService;

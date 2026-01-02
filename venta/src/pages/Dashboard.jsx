@@ -1,3 +1,4 @@
+// src/pages/Dashboard.jsx - VERSIÓN CORREGIDA
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from '../components/organisms/Header';
@@ -9,7 +10,7 @@ import Input from '../components/atoms/Input';
 import Alert from '../components/atoms/Alert';
 import { authService } from '../services/api';
 import { dashboardService } from '../services/dashboardService';
-import { reportService } from '../services/reportService'; // Nuevo servicio para reportes
+import { reportService } from '../services/reportService';
 import {
   IconCashRegister,
   IconShoppingCart,
@@ -44,107 +45,185 @@ import {
   IconCalendar as IconCalendarEvent
 } from '@tabler/icons-react';
 
-const Dashboard = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) => {
+const Dashboard = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('ventas');
-  const [currentUser, setCurrentUser] = useState(user);
+  const [currentUser, setCurrentUser] = useState(null);
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
   const [generatingReport, setGeneratingReport] = useState(false);
-  const navigate = useNavigate();
+  const [isSidebarFixed, setIsSidebarFixed] = useState(false);
   const sidebarRef = useRef(null);
   const mainContentRef = useRef(null);
+  const parentRef = useRef(null);
 
-  // Efecto para manejar scroll y mantener sidebar fijo
+  // Cargar usuario desde authService (siempre actualizado)
   useEffect(() => {
+    const loadUser = () => {
+      const user = authService.getCurrentUser();
+      if (user) {
+        setCurrentUser(user);
+      } else {
+        authService.logout();
+        navigate('/login');
+      }
+    };
+
+    loadUser();
+
+    // Escuchar cambios en el usuario (desde Profile, login, etc.)
+    const handleUserUpdate = () => {
+      loadUser();
+    };
+
+    window.addEventListener('userUpdated', handleUserUpdate);
+
+    return () => {
+      window.removeEventListener('userUpdated', handleUserUpdate);
+    };
+  }, [navigate]);
+
+  // Efecto para sidebar fijo CORREGIDO
+  useEffect(() => {
+    if (!sidebarRef.current || !parentRef.current) return;
+
+    const sidebar = sidebarRef.current;
+    const parent = parentRef.current;
+    
     const handleScroll = () => {
-      if (sidebarRef.current && mainContentRef.current) {
-        const sidebar = sidebarRef.current;
-        const mainContent = mainContentRef.current;
-        const sidebarTop = sidebar.offsetTop;
-        const scrollTop = window.pageYOffset;
+      const scrollPosition = window.scrollY;
+      const parentOffsetTop = parent.offsetTop;
+      const parentHeight = parent.offsetHeight;
+      const sidebarHeight = sidebar.offsetHeight;
+      const headerHeight = 80; // Altura del header
+      
+      // Calcular cuándo fijar el sidebar
+      const shouldFix = scrollPosition > parentOffsetTop - headerHeight;
+      
+      if (shouldFix) {
+        // Verificar que no se salga del contenedor padre
+        const maxScroll = parentOffsetTop + parentHeight - sidebarHeight - headerHeight - 30;
         
-        // Si el scroll está más allá del inicio del sidebar
-        if (scrollTop > sidebarTop - 20) {
-          sidebar.style.position = 'fixed';
-          sidebar.style.top = '20px';
-          sidebar.style.width = `${sidebar.offsetWidth}px`;
+        if (scrollPosition <= maxScroll) {
+          if (!isSidebarFixed) {
+            setIsSidebarFixed(true);
+            sidebar.style.position = 'fixed';
+            sidebar.style.top = `${headerHeight}px`;
+            sidebar.style.width = `${sidebar.offsetWidth}px`;
+          }
         } else {
+          // Cuando llegue al fondo, dejar que se desplace con el contenido
+          if (isSidebarFixed) {
+            setIsSidebarFixed(false);
+            sidebar.style.position = 'absolute';
+            sidebar.style.top = 'auto';
+            sidebar.style.bottom = '0';
+          }
+        }
+      } else {
+        // Restaurar posición original
+        if (isSidebarFixed) {
+          setIsSidebarFixed(false);
           sidebar.style.position = 'relative';
           sidebar.style.top = 'auto';
+          sidebar.style.bottom = 'auto';
           sidebar.style.width = 'auto';
         }
       }
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => {
-    if (isAuthenticated && !currentUser) {
-      const storedUser = authService.getCurrentUser();
-      if (storedUser) {
-        setCurrentUser(storedUser);
-      } else {
-        onLogout();
-        navigate('/login');
+    // Agregar margen inferior al contenido principal cuando el sidebar está fijo
+    const updateMainContentMargin = () => {
+      if (mainContentRef.current && sidebarRef.current) {
+        if (isSidebarFixed) {
+          mainContentRef.current.style.marginBottom = `${sidebarRef.current.offsetHeight}px`;
+        } else {
+          mainContentRef.current.style.marginBottom = '0';
+        }
       }
-    }
-  }, [isAuthenticated, currentUser, onLogout, navigate]);
+    };
 
+    window.addEventListener('scroll', handleScroll);
+    handleScroll(); // Ejecutar inicialmente
+    updateMainContentMargin();
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (sidebarRef.current) {
+        sidebarRef.current.style.position = 'relative';
+        sidebarRef.current.style.top = 'auto';
+        sidebarRef.current.style.width = 'auto';
+      }
+      if (mainContentRef.current) {
+        mainContentRef.current.style.marginBottom = '0';
+      }
+    };
+  }, [isSidebarFixed]);
+
+  // Ajustar tamaño del sidebar cuando cambia el tamaño de la ventana
+  useEffect(() => {
+    const handleResize = () => {
+      if (sidebarRef.current && isSidebarFixed) {
+        sidebarRef.current.style.width = `${sidebarRef.current.parentElement.offsetWidth}px`;
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isSidebarFixed]);
+
+  // Cargar datos del dashboard cuando haya usuario
   useEffect(() => {
     if (currentUser) {
       loadDashboardData();
     }
   }, [currentUser]);
 
-  // Auto-refresh automático
+  // Auto-refresh cada 15 segundos + eventos
   useEffect(() => {
     if (!currentUser) return;
 
-    const pollingInterval = setInterval(() => {
-      loadDashboardData();
+    const interval = setInterval(() => {
+      loadDashboardData(true); // refresh silencioso
     }, 15000);
 
-    const handleSaleUpdate = () => {
+    const handleUpdates = () => {
       loadDashboardData();
     };
-    window.addEventListener('saleCompleted', handleSaleUpdate);
-    window.addEventListener('stockUpdated', handleSaleUpdate);
 
-    const handleStorageChange = (e) => {
-      if (e.key === 'lastSale' || e.key === 'saleCompleted') {
-        loadDashboardData();
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('saleCompleted', handleUpdates);
+    window.addEventListener('stockUpdated', handleUpdates);
 
     return () => {
-      clearInterval(pollingInterval);
-      window.removeEventListener('saleCompleted', handleSaleUpdate);
-      window.removeEventListener('stockUpdated', handleSaleUpdate);
-      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+      window.removeEventListener('saleCompleted', handleUpdates);
+      window.removeEventListener('stockUpdated', handleUpdates);
     };
   }, [currentUser]);
 
-  const loadDashboardData = async () => {
-    setLoading(true);
+  const loadDashboardData = async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+    }
     setError(null);
+
     try {
       const response = await dashboardService.getStats();
       if (response.success) {
         setStats(response.stats);
       } else {
-        setError('Error cargando datos del dashboard');
+        setError('Error al cargar datos del dashboard');
       }
-    } catch (error) {
-      console.error('Error loading dashboard:', error);
+    } catch (err) {
+      console.error('Error loading dashboard:', err);
       setError('No se pudieron cargar los datos. Verifica tu conexión.');
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -158,79 +237,68 @@ const Dashboard = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout })
     setLoading(true);
     authService.logout();
     setTimeout(() => {
-      onLogout();
-      setLoading(false);
       navigate('/login');
     }, 500);
   };
 
-  // NUEVA FUNCIÓN: Generar reporte PDF
- // En tu Dashboard.jsx, actualiza la función handleGenerateReport:
-const handleGenerateReport = async () => {
-  setGeneratingReport(true);
-  try {
-    const reportData = {
-      usuario: currentUser,
-      fecha: new Date().toLocaleDateString('es-PE', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
-      turno: getCurrentShift(),
-      ventasHoy: stats?.ventasHoy || { monto: 0, cantidad: 0 },
-      productosVendidosHoy: stats?.productosVendidosHoy || 0,
-      ventasRecientes: stats?.ventasRecientes || [],
-      productosMasVendidos: stats?.productosMasVendidos || []
-    };
+  const handleGenerateReport = async () => {
+    if (!stats || !currentUser) {
+      Alert.error('Error', 'No hay datos para generar el reporte');
+      return;
+    }
 
-    // Generar el reporte HTML
-    await reportService.generateSalesReport(reportData);
-    
-    Alert.success('Reporte generado', 'El reporte se está imprimiendo...');
-  } catch (error) {
-    console.error('Error generando reporte:', error);
-    Alert.error('Error', 'No se pudo generar el reporte. Intenta nuevamente.');
-  } finally {
-    setGeneratingReport(false);
-  }
-};
-
-// Función para descargar reporte detallado
-  const handleDownloadDetailedReport = async () => {
     setGeneratingReport(true);
     try {
       const reportData = {
         usuario: currentUser,
-        fechaGeneracion: new Date(),
-        estadisticas: {
-          ventasTotales: stats?.ventasHoy?.monto || 0,
-          transacciones: stats?.ventasHoy?.cantidad || 0,
-          productosVendidos: stats?.productosVendidosHoy || 0,
-          clientesAtendidos: stats?.clientesAtendidosHoy || 0,
-          stockBajo: stats?.productosStockBajo || 0
-        },
-        ventasDetalladas: stats?.ventasRecientes || [],
-        productosTop: stats?.productosMasVendidos || [],
-        metodosPago: stats?.metodosPagoHoy || []
+        fecha: new Date().toLocaleDateString('es-PE', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }),
+        turno: getCurrentShift(),
+        ventasHoy: stats.ventasHoy || { monto: 0, cantidad: 0 },
+        productosVendidosHoy: stats.productosVendidosHoy || 0,
+        ventasRecientes: stats.ventasRecientes || [],
+        productosMasVendidos: stats.productosMasVendidos || []
       };
 
-      const pdfUrl = await reportService.generateDetailedReport(reportData);
-      
-      // Crear enlace de descarga
-      const link = document.createElement('a');
-      link.href = pdfUrl;
-      link.download = `reporte_ventas_${new Date().toISOString().split('T')[0]}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      Alert.success('Reporte descargado', 'El reporte detallado se ha descargado exitosamente.');
+      await reportService.generateSalesReport(reportData);
+    } catch (error) {
+      console.error('Error generando reporte:', error);
+      Alert.error('Error', 'No se pudo generar el reporte');
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
+  const handleDownloadDetailedReport = async () => {
+    if (!stats || !currentUser) {
+      Alert.error('Error', 'No hay datos para el reporte');
+      return;
+    }
+
+    setGeneratingReport(true);
+    try {
+      const reportData = {
+        usuario: currentUser,
+        estadisticas: {
+          ventasTotales: stats.ventasHoy?.monto || 0,
+          transacciones: stats.ventasHoy?.cantidad || 0,
+          productosVendidos: stats.productosVendidosHoy || 0,
+          clientesAtendidos: stats.clientesAtendidosHoy || 0,
+          stockBajo: stats.productosStockBajo || 0
+        },
+        ventasDetalladas: stats.ventasRecientes || [],
+        productosTop: stats.productosMasVendidos || [],
+        metodosPago: stats.metodosPagoHoy || []
+      };
+
+      await reportService.generateDetailedReport(reportData);
     } catch (error) {
       console.error('Error descargando reporte:', error);
-      Alert.error('Error', 'No se pudo descargar el reporte.');
+      Alert.error('Error', 'No se pudo generar el reporte detallado');
     } finally {
       setGeneratingReport(false);
     }
@@ -312,7 +380,7 @@ const handleGenerateReport = async () => {
     }
   ] : [];
 
-  if (loading) {
+  if (loading && !stats) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Loader
@@ -337,13 +405,11 @@ const handleGenerateReport = async () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header
-        isAuthenticated={isAuthenticated}
+        isAuthenticated={true}
         user={userData}
         onLogout={handleLogout}
-        onThemeToggle={onThemeToggle}
-        darkMode={darkMode}
       />
-     
+
       <main className="container mx-auto px-4 py-6 flex-grow">
         {/* Header del Dashboard */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
@@ -372,7 +438,7 @@ const handleGenerateReport = async () => {
               </div>
             </div>
           </div>
-         
+
           <div className="flex flex-col sm:flex-row gap-3 mt-4 md:mt-0">
             <Link to="/pos">
               <Button
@@ -448,11 +514,10 @@ const handleGenerateReport = async () => {
           ))}
         </div>
 
-        {/* Contenido Principal - Nuevo layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Columna Izquierda - 3/4 */}
+        {/* Contenido Principal */}
+        <div ref={parentRef} className="grid grid-cols-1 lg:grid-cols-4 gap-8 relative">
+          {/* Contenido principal - ocupa 3 columnas */}
           <div ref={mainContentRef} className="lg:col-span-3 space-y-8">
-            {/* Tabs para diferentes secciones */}
             <Card>
               <div className="border-b border-gray-200">
                 <div className="flex">
@@ -473,7 +538,7 @@ const handleGenerateReport = async () => {
                   ))}
                 </div>
               </div>
-             
+
               <div className="p-6">
                 {activeTab === 'ventas' && stats?.ventasRecientes && (
                   <div>
@@ -494,7 +559,7 @@ const handleGenerateReport = async () => {
                         </Button>
                       </div>
                     </div>
-                   
+
                     <div className="space-y-4">
                       {stats.ventasRecientes.slice(0, 5).map((venta, index) => (
                         <div key={index} className="flex items-center justify-between p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
@@ -528,7 +593,7 @@ const handleGenerateReport = async () => {
                         </div>
                       ))}
                     </div>
-                   
+
                     <div className="mt-6 pt-6 border-t border-gray-200">
                       <Link to="/sales">
                         <Button variant="outline" size="md" fullWidth>
@@ -538,7 +603,7 @@ const handleGenerateReport = async () => {
                     </div>
                   </div>
                 )}
-               
+
                 {activeTab === 'inventario' && stats?.alertasStockBajo && (
                   <div>
                     {stats.alertasStockBajo.length > 0 ? (
@@ -548,7 +613,7 @@ const handleGenerateReport = async () => {
                           title="Alertas de Inventario"
                           message={`${stats.alertasStockBajo.length} productos están por debajo del stock mínimo`}
                         />
-                       
+
                         <div className="space-y-4 mt-6">
                           {stats.alertasStockBajo.slice(0, 5).map((producto, index) => (
                             <Link to="/inventory" key={index}>
@@ -612,7 +677,6 @@ const handleGenerateReport = async () => {
               </div>
             </Card>
 
-            {/* Productos más vendidos */}
             {stats?.productosMasVendidos && stats.productosMasVendidos.length > 0 && (
               <Card
                 title="Productos Más Vendidos"
@@ -645,7 +709,7 @@ const handleGenerateReport = async () => {
                     </Link>
                   ))}
                 </div>
-               
+
                 <div className="mt-6 pt-6 border-t border-gray-200">
                   <div className="flex gap-2">
                     <Link to="/products" className="flex-1">
@@ -657,10 +721,7 @@ const handleGenerateReport = async () => {
                       variant="primary"
                       size="sm"
                       icon={IconFileText}
-                      onClick={() => {
-                        // Aquí podrías generar reporte específico de productos
-                        Alert.info('Función en desarrollo', 'Próximamente: Reporte de productos');
-                      }}
+                      onClick={() => Alert.info('En desarrollo', 'Próximamente: Reporte de productos')}
                     >
                       Reporte
                     </Button>
@@ -669,19 +730,18 @@ const handleGenerateReport = async () => {
               </Card>
             )}
           </div>
-         
-          {/* Columna Derecha - 1/4 (Sidebar fijo) */}
-          <div ref={sidebarRef} className="lg:col-span-1">
-            <div className="space-y-6">
-              {/* Perfil y acciones rápidas - FIJADO */}
-              <Card className="sticky top-6">
+
+          {/* Sidebar derecho - FIJO PERO CON ALTURA CONSTANTE */}
+          <div className="lg:col-span-1 relative" style={{ height: 'fit-content' }}>
+            <div ref={sidebarRef} className="space-y-6 transition-all duration-200">
+              <Card>
                 <div className="text-center">
                   <div className="w-20 h-20 rounded-xl bg-gradient-pos mx-auto mb-4 flex items-center justify-center">
                     <span className="text-white text-2xl font-bold">
                       {getUserInitials()}
                     </span>
                   </div>
-                 
+
                   <h3 className="text-lg font-bold text-gray-900">
                     {userData.nombre} {userData.apellido}
                   </h3>
@@ -691,15 +751,14 @@ const handleGenerateReport = async () => {
                   <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium mb-4 ${getRoleBadgeColor(userData.cargo)}`}>
                     {userData.cargo}
                   </div>
-                 
+
                   <div className="mt-6 space-y-3">
-                    <Link to="/settings">
+                    <Link to="/profile">
                       <Button variant="outline" size="md" fullWidth icon={IconSettings}>
-                        Configuración
+                        Mi Perfil
                       </Button>
                     </Link>
-                    
-                    {/* Botón Mejorado: Generar Reporte */}
+
                     <Button
                       variant="primary"
                       size="md"
@@ -708,10 +767,9 @@ const handleGenerateReport = async () => {
                       onClick={handleGenerateReport}
                       loading={generatingReport}
                     >
-                      {generatingReport ? 'Generando...' : 'Generar Reporte'}
+                      {generatingReport ? 'Generando...' : 'Generar Reporte Diario'}
                     </Button>
-                    
-                    {/* Botón adicional para reporte detallado */}
+
                     <Button
                       variant="outline"
                       size="sm"
@@ -720,9 +778,9 @@ const handleGenerateReport = async () => {
                       onClick={handleDownloadDetailedReport}
                       loading={generatingReport}
                     >
-                      Descargar Reporte
+                      Descargar Reporte Detallado
                     </Button>
-                    
+
                     <Button
                       variant="outline"
                       size="md"
@@ -733,7 +791,7 @@ const handleGenerateReport = async () => {
                       Cerrar Sesión
                     </Button>
                   </div>
-                 
+
                   <div className="mt-8 pt-6 border-t border-gray-200">
                     <h4 className="font-semibold text-gray-900 mb-3 text-left">
                       Información del Turno
@@ -776,11 +834,7 @@ const handleGenerateReport = async () => {
 
               {/* Cajeros activos */}
               {stats?.usuariosActivos && stats.usuariosActivos.length > 0 && (
-                <Card
-                  title="Cajeros Activos Hoy"
-                  subtitle="Ventas por cajero"
-                  className="sticky top-[calc(100vh-400px)]"
-                >
+                <Card title="Cajeros Activos Hoy" subtitle="Ventas por cajero">
                   <div className="space-y-4">
                     {stats.usuariosActivos.map((usuario, index) => (
                       <div key={index} className="flex items-center justify-between">
@@ -815,17 +869,13 @@ const handleGenerateReport = async () => {
 
               {/* Métodos de pago */}
               {stats?.metodosPagoHoy && stats.metodosPagoHoy.length > 0 && (
-                <Card
-                  title="Métodos de Pago"
-                  subtitle="Distribución de hoy"
-                  className="sticky top-[calc(100vh-600px)]"
-                >
+                <Card title="Métodos de Pago" subtitle="Distribución de hoy">
                   <div className="space-y-4">
                     {stats.metodosPagoHoy.map((metodo, index) => {
                       const porcentaje = stats.ventasHoy.monto > 0
                         ? ((metodo.monto / stats.ventasHoy.monto) * 100).toFixed(1)
                         : 0;
-                     
+
                       return (
                         <div key={index} className="flex items-center justify-between">
                           <div className="flex items-center">
@@ -851,8 +901,8 @@ const handleGenerateReport = async () => {
           </div>
         </div>
       </main>
-     
-      <Footer darkMode={darkMode} />
+
+      <Footer />
     </div>
   );
 };

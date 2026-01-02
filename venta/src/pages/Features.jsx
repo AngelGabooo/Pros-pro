@@ -1,11 +1,13 @@
-import React from 'react';
+// src/pages/Features.jsx
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import Header from '../components/organisms/Header';
 import Footer from '../components/organisms/Footer';
 import Card from '../components/atoms/Card';
 import Button from '../components/atoms/Button';
 import Badge from '../components/atoms/Badge';
-import Alert from '../components/atoms/Alert'; // Asegúrate de tener este componente
-import { useNavigate } from 'react-router-dom';
+import Alert from '../components/atoms/Alert';
+import { authService } from '../services/api';
 import {
   IconCashRegister,
   IconChartLine,
@@ -36,9 +38,19 @@ import {
   IconX
 } from '@tabler/icons-react';
 
-const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, user, onLogout }) => {
+const Features = ({ darkMode = false, onThemeToggle }) => {
   const navigate = useNavigate();
-  const [showVideoAlert, setShowVideoAlert] = React.useState(false);
+  const [showVideoAlert, setShowVideoAlert] = useState(false);
+
+  // Obtener estado de autenticación directamente desde authService
+  const isAuthenticated = authService.isAuthenticated();
+  const currentUser = isAuthenticated ? authService.getCurrentUser() : null;
+
+  const handleLogout = () => {
+    authService.logout();
+    // Opcional: recargar para limpiar estado
+    window.location.href = '/login';
+  };
 
   const heroFeatures = [
     { text: 'Facturación SUNAT en 1 clic', icon: IconCheck },
@@ -166,8 +178,8 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex flex-col">
         <Header
           isAuthenticated={isAuthenticated}
-          user={user}
-          onLogout={onLogout}
+          user={currentUser}
+          onLogout={handleLogout}
           onThemeToggle={onThemeToggle}
           darkMode={darkMode}
         />
@@ -221,7 +233,7 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
         )}
 
         <main className="flex-grow">
-          {/* Hero Section con IMAGEN real en lugar de placeholder */}
+          {/* Hero Section */}
           <section className="relative py-20 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-success-500/5 to-purple-500/10"></div>
             <div className="container relative mx-auto px-4">
@@ -272,7 +284,7 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
                   </div>
                 </div>
 
-                {/* IMAGEN REAL DE DEMO INTERACTIVA */}
+                {/* IMAGEN REAL DE DEMO */}
                 <div className="relative">
                   <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-gray-200">
                     <img
@@ -287,8 +299,7 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
                     </div>
                   </div>
 
-                  {/* Elementos flotantes */}
-                  <div className="absolute -top-4 -right-4 w-24 h-24 bg-success-100 rounded-2xl flex items-center justify-centeeer shadow-lg">
+                  <div className="absolute -top-4 -right-4 w-24 h-24 bg-success-100 rounded-2xl flex items-center justify-center shadow-lg">
                     <IconTrendingUp className="text-success-600 text-2xl" />
                   </div>
                   <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-primary-100 rounded-2xl flex items-center justify-center shadow-lg">
@@ -398,7 +409,7 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
                 </div>
               </div>
 
-              {/* Sección de Video Demo con alerta */}
+              {/* Sección de Video Demo */}
               <div className="mb-20" id="video-demo">
                 <Card className="overflow-hidden">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
@@ -495,7 +506,7 @@ const Features = ({ darkMode = false, onThemeToggle, isAuthenticated = false, us
           </section>
         </main>
 
-        <Footer />
+        <Footer darkMode={darkMode} />
       </div>
     </div>
   );

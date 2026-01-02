@@ -1,340 +1,341 @@
+// src/services/reportService.js
+// Servicio para generar reportes (HTML imprimible + CSV descargable)
+// Sin dependencias externas (no usa jsPDF)
 
-
-// src/services/reportService.js - VERSIÓN SIN JSPDF (HTML to PDF)
 export const reportService = {
+  /**
+   * Genera un reporte de ventas bonito en HTML y lo abre para imprimir
+   * @param {Object} data - Datos del dashboard/stats
+   */
   generateSalesReport: async (data) => {
     return new Promise((resolve) => {
-      // Crear un documento HTML para el reporte
+      const fechaGeneracion = new Date().toLocaleString('es-PE');
+      const fechaReporte = new Date().toLocaleDateString('es-PE');
+
       const htmlContent = `
         <!DOCTYPE html>
-        <html>
+        <html lang="es">
         <head>
           <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Reporte de Ventas - POS Pro</title>
           <style>
             body {
-              font-family: 'Arial', sans-serif;
+              font-family: 'Segoe UI', Arial, sans-serif;
               margin: 40px;
               color: #333;
+              line-height: 1.6;
+              background: #fff;
             }
             .header {
               text-align: center;
-              border-bottom: 3px solid #3b82f6;
+              border-bottom: 4px solid #2563eb;
               padding-bottom: 20px;
               margin-bottom: 30px;
             }
             .header h1 {
               color: #1e40af;
               margin: 0;
-              font-size: 28px;
+              font-size: 32px;
+              font-weight: bold;
+            }
+            .header p {
+              color: #64748b;
+              margin: 10px 0 0;
+              font-size: 16px;
             }
             .info-section {
               background: #f8fafc;
-              padding: 20px;
-              border-radius: 8px;
+              padding: 25px;
+              border-radius: 12px;
               margin-bottom: 30px;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             }
             .info-grid {
               display: grid;
-              grid-template-columns: repeat(2, 1fr);
-              gap: 15px;
-              margin-bottom: 20px;
+              grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+              gap: 20px;
+              margin-top: 15px;
             }
             .info-item {
-              padding: 10px;
               background: white;
-              border-radius: 6px;
-              border-left: 4px solid #3b82f6;
+              padding: 15px;
+              border-radius: 8px;
+              border-left: 5px solid #3b82f6;
+              box-shadow: 0 1px 4px rgba(0,0,0,0.1);
             }
             .info-label {
               font-weight: 600;
               color: #64748b;
               font-size: 14px;
+              margin-bottom: 5px;
             }
             .info-value {
-              font-size: 16px;
+              font-size: 18px;
               font-weight: bold;
               color: #1e293b;
             }
             .section-title {
               color: #1e40af;
+              font-size: 22px;
               border-bottom: 2px solid #e2e8f0;
               padding-bottom: 10px;
-              margin: 30px 0 20px 0;
+              margin: 40px 0 20px 0;
             }
             table {
               width: 100%;
               border-collapse: collapse;
-              margin-bottom: 30px;
+              margin: 20px 0;
+              background: white;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+              border-radius: 8px;
+              overflow: hidden;
             }
             th {
               background: #3b82f6;
               color: white;
-              padding: 12px;
+              padding: 14px;
               text-align: left;
+              font-weight: 600;
             }
             td {
-              padding: 10px;
+              padding: 12px 14px;
               border-bottom: 1px solid #e2e8f0;
             }
             tr:hover {
-              background: #f1f5f9;
+              background: #f8fafc;
             }
-            .footer {
-              text-align: center;
-              margin-top: 40px;
-              color: #64748b;
-              font-size: 12px;
-              border-top: 1px solid #e2e8f0;
-              padding-top: 20px;
-            }
-            .total {
-              background: #10b981;
+            .total-row {
+              background: #10b981 !important;
               color: white;
               font-weight: bold;
-              padding: 12px;
-              border-radius: 6px;
+              font-size: 18px;
             }
             .badge {
               display: inline-block;
-              padding: 4px 12px;
+              padding: 6px 14px;
               border-radius: 20px;
-              font-size: 12px;
+              font-size: 13px;
               font-weight: 600;
-              margin: 2px;
             }
-            .badge-admin { background: #ef4444; color: white; }
-            .badge-sales { background: #10b981; color: white; }
-            .badge-stock { background: #f59e0b; color: white; }
+            .badge-admin { background: #ef4444; }
+            .badge-gerente { background: #f59e0b; }
+            .badge-cajero { background: #3b82f6; }
+            .badge-almacen { background: #8b5cf6; }
+            .footer {
+              text-align: center;
+              margin-top: 60px;
+              padding-top: 20px;
+              border-top: 1px solid #e2e8f0;
+              color: #64748b;
+              font-size: 13px;
+            }
+            @media print {
+              body { margin: 20px; }
+              .no-print { display: none; }
+            }
           </style>
         </head>
         <body>
           <div class="header">
-            <h1>📊 REPORTE DE VENTAS</h1>
-            <p>Sistema POS Pro - ${new Date().toLocaleDateString('es-PE')}</p>
+            <h1>📊 REPORTE DE VENTAS DIARIAS</h1>
+            <p>Sistema POS Pro • ${fechaReporte}</p>
           </div>
-          
+
           <div class="info-section">
-            <h2>Información del Usuario</h2>
+            <h2 style="color: #1e40af; margin-top: 0;">Información del Responsable</h2>
             <div class="info-grid">
               <div class="info-item">
                 <div class="info-label">Usuario</div>
-                <div class="info-value">${data.usuario.nombre} ${data.usuario.apellido}</div>
+                <div class="info-value">${data.usuario?.nombre || 'N/A'} ${data.usuario?.apellido || ''}</div>
               </div>
               <div class="info-item">
                 <div class="info-label">Cargo</div>
                 <div class="info-value">
-                  <span class="badge badge-admin">${data.usuario.cargo}</span>
+                  <span class="badge badge-${(data.usuario?.cargo || '').toLowerCase().replace(' ', '-')}">
+                    ${data.usuario?.cargo || 'N/A'}
+                  </span>
                 </div>
               </div>
               <div class="info-item">
-                <div class="info-label">Fecha</div>
-                <div class="info-value">${data.fecha}</div>
+                <div class="info-label">Tienda</div>
+                <div class="info-value">${data.usuario?.tiendaNombre || 'Mi Tienda'}</div>
               </div>
               <div class="info-item">
-                <div class="info-label">Turno</div>
-                <div class="info-value">${data.turno || 'Actual'}</div>
+                <div class="info-label">Generado el</div>
+                <div class="info-value">${fechaGeneracion}</div>
               </div>
             </div>
           </div>
-          
-          <h2 class="section-title">📈 Estadísticas del Día</h2>
+
+          <h2 class="section-title">📈 Resumen del Día</h2>
           <div class="info-grid">
             <div class="info-item">
               <div class="info-label">Ventas Totales</div>
-              <div class="info-value">${new Intl.NumberFormat('es-PE', {
-                style: 'currency',
-                currency: 'PEN'
-              }).format(data.ventasHoy.monto)}</div>
+              <div class="info-value">
+                ${new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(data.ventasHoy?.monto || 0)}
+              </div>
             </div>
             <div class="info-item">
-              <div class="info-label">Transacciones</div>
-              <div class="info-value">${data.ventasHoy.cantidad}</div>
+              <div class="info-label">N° de Transacciones</div>
+              <div class="info-value">${data.ventasHoy?.cantidad || 0}</div>
             </div>
             <div class="info-item">
               <div class="info-label">Productos Vendidos</div>
-              <div class="info-value">${data.productosVendidosHoy} unidades</div>
+              <div class="info-value">${data.productosVendidosHoy || 0} unidades</div>
             </div>
             <div class="info-item">
               <div class="info-label">Ticket Promedio</div>
-              <div class="info-value">${new Intl.NumberFormat('es-PE', {
-                style: 'currency',
-                currency: 'PEN'
-              }).format(data.ventasHoy.cantidad > 0 ? data.ventasHoy.monto / data.ventasHoy.cantidad : 0)}</div>
+              <div class="info-value">
+                ${new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(
+                  data.ventasHoy?.cantidad > 0 
+                    ? (data.ventasHoy?.monto || 0) / data.ventasHoy.cantidad 
+                    : 0
+                )}
+              </div>
             </div>
           </div>
-          
-          <h2 class="section-title">🛒 Ventas Recientes</h2>
+
+          <h2 class="section-title">🛍️ Últimas Ventas</h2>
           <table>
             <thead>
               <tr>
                 <th>Código</th>
                 <th>Cliente</th>
-                <th>Productos</th>
+                <th>Items</th>
                 <th>Total</th>
                 <th>Hora</th>
               </tr>
             </thead>
             <tbody>
-              ${data.ventasRecientes.slice(0, 10).map(venta => `
+              ${data.ventasRecientes?.slice(0, 10).map(venta => `
                 <tr>
-                  <td>${venta.codigo}</td>
-                  <td>${venta.cliente || 'Sin cliente'}</td>
-                  <td>${venta.items.length}</td>
-                  <td>${new Intl.NumberFormat('es-PE', {
-                    style: 'currency',
-                    currency: 'PEN'
-                  }).format(venta.total)}</td>
-                  <td>${new Date(venta.fechaVenta).toLocaleTimeString()}</td>
+                  <td><strong>${venta.codigo || 'N/A'}</strong></td>
+                  <td>${venta.cliente || 'Cliente ocasional'}</td>
+                  <td>${venta.items?.length || 0}</td>
+                  <td><strong>${new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(venta.total || 0)}</strong></td>
+                  <td>${new Date(venta.fechaVenta).toLocaleTimeString('es-PE')}</td>
                 </tr>
-              `).join('')}
+              `).join('') || '<tr><td colspan="5" style="text-align:center; color:#64748b;">No hay ventas recientes</td></tr>'}
             </tbody>
             <tfoot>
-              <tr>
-                <td colspan="3" style="text-align: right; font-weight: bold;">Total:</td>
-                <td colspan="2" class="total">
-                  ${new Intl.NumberFormat('es-PE', {
-                    style: 'currency',
-                    currency: 'PEN'
-                  }).format(data.ventasRecientes.reduce((sum, venta) => sum + venta.total, 0))}
+              <tr class="total-row">
+                <td colspan="3"><strong>TOTAL DEL DÍA</strong></td>
+                <td colspan="2">
+                  <strong>${new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(data.ventasHoy?.monto || 0)}</strong>
                 </td>
               </tr>
             </tfoot>
           </table>
-          
+
           ${data.productosMasVendidos && data.productosMasVendidos.length > 0 ? `
-            <h2 class="section-title">🏆 Productos Más Vendidos</h2>
+            <h2 class="section-title">🏆 Top 5 Productos Más Vendidos</h2>
             <table>
               <thead>
                 <tr>
+                  <th>#</th>
                   <th>Producto</th>
-                  <th>Cantidad Vendida</th>
+                  <th>Cantidad</th>
                   <th>Ingresos</th>
                 </tr>
               </thead>
               <tbody>
-                ${data.productosMasVendidos.slice(0, 5).map(producto => `
+                ${data.productosMasVendidos.slice(0, 5).map((producto, index) => `
                   <tr>
-                    <td>${producto.nombre}</td>
-                    <td>${producto.totalVendido} unidades</td>
-                    <td>${new Intl.NumberFormat('es-PE', {
-                      style: 'currency',
-                      currency: 'PEN'
-                    }).format(producto.totalIngresos)}</td>
+                    <td><strong>${index + 1}</strong></td>
+                    <td>${producto.nombre || 'N/A'}</td>
+                    <td><strong>${producto.totalVendido || 0} und.</strong></td>
+                    <td><strong>${new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(producto.totalIngresos || 0)}</strong></td>
                   </tr>
                 `).join('')}
               </tbody>
             </table>
           ` : ''}
-          
+
           <div class="footer">
-            <p>Documento generado automáticamente por POS Pro System</p>
-            <p>Fecha de generación: ${new Date().toLocaleString('es-PE')}</p>
-            <p>© ${new Date().getFullYear()} Sistema de Punto de Venta - Todos los derechos reservados</p>
+            <p><strong>Documento generado automáticamente por POS Pro System</strong></p>
+            <p>Fecha y hora de generación: ${fechaGeneracion}</p>
+            <p>© ${new Date().getFullYear()} - Sistema de Punto de Venta Profesional</p>
           </div>
         </body>
         </html>
       `;
-      
-      // Crear un blob con el HTML
+
       const blob = new Blob([htmlContent], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
-      
-      // Abrir en nueva ventana para imprimir
-      const printWindow = window.open(url, '_blank');
+
+      const printWindow = window.open(url, '_blank', 'width=1000,height=800');
+
       if (printWindow) {
         printWindow.onload = () => {
-          printWindow.print();
-          resolve(url);
+          setTimeout(() => {
+            printWindow.focus();
+            printWindow.print();
+          }, 500);
         };
+        resolve({ success: true, url });
       } else {
-        // Si no se pudo abrir ventana, mostrar alerta
-        alert('Permite las ventanas emergentes para imprimir el reporte');
-        resolve(null);
+        alert('⚠️ Por favor, permite las ventanas emergentes para imprimir el reporte.');
+        resolve({ success: false, error: 'Pop-up bloqueado' });
       }
     });
   },
 
+  /**
+   * Genera un reporte detallado en formato CSV para descargar
+   */
   generateDetailedReport: async (data) => {
     return new Promise((resolve) => {
-      // Para el reporte detallado, podemos usar una función más simple
-      // que cree un archivo CSV para descargar
       let csvContent = "data:text/csv;charset=utf-8,";
-      
-      // Cabeceras del CSV
-      const headers = [
-        'Tipo de Reporte',
-        'Fecha',
-        'Usuario',
-        'Cargo',
-        'Ventas Totales',
-        'Transacciones',
-        'Productos Vendidos',
-        'Clientes Atendidos',
-        'Productos Stock Bajo'
-      ];
-      
-      csvContent += headers.join(',') + "\\n";
-      
-      // Datos principales
-      const rowData = [
-        'Reporte Detallado',
-        new Date().toLocaleDateString('es-PE'),
-        `${data.usuario.nombre} ${data.usuario.apellido}`,
-        data.usuario.cargo,
-        data.estadisticas.ventasTotales,
-        data.estadisticas.transacciones,
-        data.estadisticas.productosVendidos,
-        data.estadisticas.clientesAtendidos,
-        data.estadisticas.stockBajo
-      ];
-      
-      csvContent += rowData.join(',') + "\\n\\n";
-      
+
+      // Encabezado principal
+      csvContent += "REPORTE DETALLADO DE VENTAS\n";
+      csvContent += `Fecha de Generación:,${new Date().toLocaleString('es-PE')}\n`;
+      csvContent += `Usuario:,${data.usuario?.nombre || ''} ${data.usuario?.apellido || ''}\n`;
+      csvContent += `Cargo:,${data.usuario?.cargo || ''}\n`;
+      csvContent += `Tienda:,${data.usuario?.tiendaNombre || 'Mi Tienda'}\n\n`;
+
+      // Resumen del día
+      csvContent += "RESUMEN DEL DÍA\n";
+      csvContent += "Concepto,Valor\n";
+      csvContent += `Ventas Totales,${data.ventasHoy?.monto || 0}\n`;
+      csvContent += `N° Transacciones,${data.ventasHoy?.cantidad || 0}\n`;
+      csvContent += `Productos Vendidos,${data.productosVendidosHoy || 0}\n`;
+      csvContent += `Ticket Promedio,${data.ventasHoy?.cantidad > 0 ? (data.ventasHoy.monto / data.ventasHoy.cantidad).toFixed(2) : 0}\n\n`;
+
       // Ventas detalladas
-      if (data.ventasDetalladas.length > 0) {
-        csvContent += "VENTAS DETALLADAS\\n";
-        csvContent += 'Código,Cliente,Productos,Cantidad Total,Total,Método Pago,Fecha/Hora\\n';
-        
-        data.ventasDetalladas.forEach(venta => {
-          const cantidadTotal = venta.items.reduce((sum, item) => sum + item.cantidad, 0);
-          const ventaRow = [
-            venta.codigo,
-            `"${venta.cliente || 'Sin cliente'}"`,
-            `"${venta.items.map(item => item.nombre).join(', ')}"`,
-            cantidadTotal,
-            venta.total,
-            venta.metodoPago,
-            new Date(venta.fechaVenta).toLocaleString('es-PE')
-          ];
-          csvContent += ventaRow.join(',') + "\\n";
+      if (data.ventasRecientes && data.ventasRecientes.length > 0) {
+        csvContent += "ÚLTIMAS VENTAS\n";
+        csvContent += "Código,Cliente,Items,Total,Hora,Método Pago\n";
+
+        data.ventasRecientes.slice(0, 20).forEach(venta => {
+          const itemsText = venta.items?.map(i => i.nombre).join(' | ') || '';
+          csvContent += `"${venta.codigo || ''}","${venta.cliente || 'Ocasional'}","${itemsText}",${venta.total || 0},${new Date(venta.fechaVenta).toLocaleTimeString('es-PE')},${venta.metodoPago || 'N/A'}\n`;
         });
-        
-        csvContent += "\\n";
+        csvContent += "\n";
       }
-      
-      // Métodos de pago
-      if (data.metodosPago.length > 0) {
-        csvContent += "MÉTODOS DE PAGO\\n";
-        csvContent += 'Método,Monto,Porcentaje\\n';
-        
-        data.metodosPago.forEach(metodo => {
-          const porcentaje = data.estadisticas.ventasTotales > 0 
-            ? ((metodo.monto / data.estadisticas.ventasTotales) * 100).toFixed(1)
-            : '0';
-          
-          const metodoRow = [
-            metodo._id,
-            metodo.monto,
-            `${porcentaje}%`
-          ];
-          csvContent += metodoRow.join(',') + "\\n";
+
+      // Productos más vendidos
+      if (data.productosMasVendidos && data.productosMasVendidos.length > 0) {
+        csvContent += "TOP PRODUCTOS MÁS VENDIDOS\n";
+        csvContent += "Posición,Producto,Cantidad,Ingresos\n";
+
+        data.productosMasVendidos.slice(0, 10).forEach((p, i) => {
+          csvContent += `${i + 1},${p.nombre || 'N/A'},${p.totalVendido || 0},${p.totalIngresos || 0}\n`;
         });
       }
-      
-      // Crear enlace de descarga
-      const encodedUri = encodeURI(csvContent);
-      resolve(encodedUri);
+
+      const encodedUri = encodeURIComponent(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `reporte_ventas_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      resolve({ success: true, message: 'CSV descargado correctamente' });
     });
   }
 };
+
+export default reportService;

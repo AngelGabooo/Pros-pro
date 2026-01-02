@@ -1,3 +1,4 @@
+// src/pages/Profile.jsx
 import React, { useState, useEffect } from 'react';
 import Header from '../components/organisms/Header';
 import Card from '../components/atoms/Card';
@@ -42,27 +43,27 @@ const Profile = ({ isAuthenticated, user, onLogout }) => {
   const [showBankData, setShowBankData] = useState(false);
 
   useEffect(() => {
-  const loadUserData = async () => {
-    setLoading(true);
-    
-    // Siempre carga el usuario desde localStorage (que ya actualizaste)
-    const currentUser = authService.getCurrentUser();
-    
-    if (currentUser) {
-      initializeProfileData(currentUser);
+    const loadUserData = async () => {
+      setLoading(true);
+      
+      // Siempre carga el usuario desde authService (ya sincronizado con el servidor)
+      const currentUser = authService.getCurrentUser();
+      
+      if (currentUser) {
+        initializeProfileData(currentUser);
+      } else {
+        navigate('/login');
+      }
+      
+      setLoading(false);
+    };
+
+    if (isAuthenticated || authService.isAuthenticated()) {
+      loadUserData();
     } else {
       navigate('/login');
     }
-    
-    setLoading(false);
-  };
-
-  if (isAuthenticated) {
-    loadUserData();
-  } else {
-    navigate('/login');
-  }
-}, [isAuthenticated, navigate]); // ← Quita 'user' de las dependencias
+  }, [isAuthenticated, navigate]);
 
   const initializeProfileData = (userData) => {
     const profile = {
@@ -155,99 +156,96 @@ const Profile = ({ isAuthenticated, user, onLogout }) => {
   };
 
   const handleSaveProfile = async () => {
-  setLoading(true);
+    setLoading(true);
 
-  if (!editData.nombre?.trim()) {
-    alert('El nombre es obligatorio');
-    setLoading(false);
-    return;
-  }
-  if (!editData.apellido?.trim()) {
-    alert('El apellido es obligatorio');
-    setLoading(false);
-    return;
-  }
-  if (!editData.email?.trim()) {
-    alert('El email es obligatorio');
-    setLoading(false);
-    return;
-  }
+    if (!editData.nombre?.trim()) {
+      alert('El nombre es obligatorio');
+      setLoading(false);
+      return;
+    }
+    if (!editData.apellido?.trim()) {
+      alert('El apellido es obligatorio');
+      setLoading(false);
+      return;
+    }
+    if (!editData.email?.trim()) {
+      alert('El email es obligatorio');
+      setLoading(false);
+      return;
+    }
 
-  try {
-    // Preparar datos para enviar al servidor
-    const datosParaEnviar = {
-      nombre: editData.nombre.trim(),
-      apellido: editData.apellido.trim(),
-      email: editData.email.trim(),
-      telefono: editData.telefono || '',
-      sucursal: editData.sucursal || 'Principal',
-      cargo: editData.cargo,
-      banco: bankEditData.banco || '',
-      tipoCuenta: bankEditData.tipoCuenta || 'Ahorros',
-      numeroCuenta: bankEditData.numeroCuenta || '',
-      cci: bankEditData.cci || '',
-      titularCuenta: bankEditData.titularCuenta || '',
-      monedaCuenta: bankEditData.monedaCuenta || 'PEN',
-      // === DATOS DE LA TIENDA ===
-      tiendaNombre: editData.tiendaNombre?.trim() || 'Mi Tienda',
-      tiendaDireccion: editData.tiendaDireccion?.trim() || '',
-      tiendaTelefono: editData.tiendaTelefono?.trim() || '',
-      tiendaRFC: editData.tiendaRFC?.trim() || '',
-      tiendaMensajeTicket: editData.tiendaMensajeTicket?.trim() || '¡Gracias por su compra! Vuelva pronto :)'
-    };
-
-    console.log('📤 Enviando datos al servidor:', datosParaEnviar);
-
-    // Usar la función actualizada de authService
-    const result = await authService.updateUserInfo(datosParaEnviar);
-    
-    if (result.success && result.user) {
-      console.log('✅ Respuesta del servidor:', result);
-      
-      // Actualizar estado local con los datos del servidor
-      const updatedProfile = {
-        ...profileData,
-        ...result.user,
-        nombreCompleto: `${result.user.nombre} ${result.user.apellido}`,
-        datosBancarios: {
-          banco: result.user.banco || '',
-          tipoCuenta: result.user.tipoCuenta || 'Ahorros',
-          numeroCuenta: result.user.numeroCuenta || '',
-          cci: result.user.cci || '',
-          titularCuenta: result.user.titularCuenta || '',
-          monedaCuenta: result.user.monedaCuenta || 'PEN'
-        },
-        tiendaNombre: result.user.tiendaNombre || 'Mi Tienda',
-        tiendaDireccion: result.user.tiendaDireccion || '',
-        tiendaTelefono: result.user.tiendaTelefono || '',
-        tiendaRFC: result.user.tiendaRFC || '',
-        tiendaMensajeTicket: result.user.tiendaMensajeTicket || '¡Gracias por su compra! Vuelva pronto :)',
-        ultimoAcceso: new Date().toLocaleString('es-PE')
+    try {
+      // Preparar datos para enviar al servidor
+      const datosParaEnviar = {
+        nombre: editData.nombre.trim(),
+        apellido: editData.apellido.trim(),
+        email: editData.email.trim(),
+        telefono: editData.telefono || '',
+        sucursal: editData.sucursal || 'Principal',
+        cargo: editData.cargo,
+        banco: bankEditData.banco || '',
+        tipoCuenta: bankEditData.tipoCuenta || 'Ahorros',
+        numeroCuenta: bankEditData.numeroCuenta || '',
+        cci: bankEditData.cci || '',
+        titularCuenta: bankEditData.titularCuenta || '',
+        monedaCuenta: bankEditData.monedaCuenta || 'PEN',
+        // === DATOS DE LA TIENDA ===
+        tiendaNombre: editData.tiendaNombre?.trim() || 'Mi Tienda',
+        tiendaDireccion: editData.tiendaDireccion?.trim() || '',
+        tiendaTelefono: editData.tiendaTelefono?.trim() || '',
+        tiendaRFC: editData.tiendaRFC?.trim() || '',
+        tiendaMensajeTicket: editData.tiendaMensajeTicket?.trim() || '¡Gracias por su compra! Vuelva pronto :)'
       };
+
+      console.log('📤 Enviando datos al servidor:', datosParaEnviar);
+
+      // Usar authService para actualizar en el servidor
+      const result = await authService.updateUserInfo(datosParaEnviar);
       
-      setProfileData(updatedProfile);
-      setIsEditing(false);
-      setSaveSuccess(true);
-      
-      // Forzar recarga de usuario en toda la app
-      setTimeout(() => {
+      if (result.success && result.user) {
+        console.log('✅ Perfil actualizado en el servidor:', result.user);
+        
+        // Actualizar perfil local con datos frescos del servidor
+        const updatedProfile = {
+          ...profileData,
+          ...result.user,
+          nombreCompleto: `${result.user.nombre} ${result.user.apellido}`.trim(),
+          datosBancarios: {
+            banco: result.user.banco || '',
+            tipoCuenta: result.user.tipoCuenta || 'Ahorros',
+            numeroCuenta: result.user.numeroCuenta || '',
+            cci: result.user.cci || '',
+            titularCuenta: result.user.titularCuenta || '',
+            monedaCuenta: result.user.monedaCuenta || 'PEN'
+          },
+          tiendaNombre: result.user.tiendaNombre || 'Mi Tienda',
+          tiendaDireccion: result.user.tiendaDireccion || '',
+          tiendaTelefono: result.user.tiendaTelefono || '',
+          tiendaRFC: result.user.tiendaRFC || '',
+          tiendaMensajeTicket: result.user.tiendaMensajeTicket || '¡Gracias por su compra! Vuelva pronto :)',
+          ultimoAcceso: new Date().toLocaleString('es-PE')
+        };
+        
+        setProfileData(updatedProfile);
+        setIsEditing(false);
+        setSaveSuccess(true);
+        
+        // Notificar a toda la app (Header, etc.) que el usuario cambió
         window.dispatchEvent(new CustomEvent('userUpdated', {
           detail: { user: result.user }
         }));
-      }, 1000);
-      
-      // Ocultar mensaje después de 4 segundos
-      setTimeout(() => setSaveSuccess(false), 4000);
-    } else {
-      alert('Error al guardar: ' + (result.error || 'Respuesta inválida del servidor'));
+        
+        setTimeout(() => setSaveSuccess(false), 5000);
+      } else {
+        alert('Error al guardar: ' + (result.error || 'Respuesta inválida del servidor'));
+      }
+    } catch (error) {
+      console.error('❌ Error guardando perfil:', error);
+      alert('Error al guardar los cambios: ' + (error.message || 'Verifica tu conexión'));
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('❌ Error guardando perfil:', error);
-    alert('Error al guardar los cambios: ' + (error.message || 'Verifica tu conexión'));
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
@@ -704,7 +702,7 @@ const Profile = ({ isAuthenticated, user, onLogout }) => {
                               onChange={handleBankInputChange}
                               className="w-full px-4 py-3 pl-10 rounded-lg border border-gray-300 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                             >
-                              <option value="MXN">Pesos (MXN)</option>
+                              <option value="PEN">Soles (PEN)</option>
                               <option value="USD">Dólares (USD)</option>
                             </select>
                             <IconCurrencyDollar className="absolute left-3 top-3.5 text-gray-400" size={20} />
@@ -713,7 +711,7 @@ const Profile = ({ isAuthenticated, user, onLogout }) => {
                           <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                             <IconCurrencyDollar className="text-gray-400 mr-3" size={20} />
                             <span className="font-medium">
-                              {profileData.datosBancarios?.monedaCuenta === 'MXN' ? 'Pesos (MXN)' : 'Dolares (USD)'}
+                              {profileData.datosBancarios?.monedaCuenta || 'PEN'}
                             </span>
                           </div>
                         )}
@@ -730,7 +728,7 @@ const Profile = ({ isAuthenticated, user, onLogout }) => {
               </div>
             </Card>
 
-            {/* === NUEVA SECCIÓN: DATOS DE LA TIENDA === */}
+            {/* === SECCIÓN DATOS DE LA TIENDA === */}
             <Card title="Datos de la Tienda (para tickets)" variant="light">
               <div className="space-y-4">
                 <p className="text-sm text-gray-600 mb-4">
@@ -864,7 +862,6 @@ const Profile = ({ isAuthenticated, user, onLogout }) => {
 
           <div className="lg:w-1/3">
             <div className="sticky top-24 space-y-8">
-              {/* Sidebar derecho (igual que antes) */}
               <Card>
                 <div className="text-center">
                   <div className="relative mx-auto mb-6">

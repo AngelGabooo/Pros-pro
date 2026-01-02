@@ -1,4 +1,4 @@
-// src/pages/Login.jsx CORREGIDO
+// src/pages/Login.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/organisms/Header';
@@ -6,7 +6,7 @@ import AuthContainer from '../components/organisms/AuthContainer';
 import Footer from '../components/organisms/Footer';
 import { authService } from '../services/api';
 
-const Login = ({ onLogin }) => { // <-- Asegúrate de recibir onLogin como prop
+const Login = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [loading, setLoading] = useState(false);
@@ -14,56 +14,49 @@ const Login = ({ onLogin }) => { // <-- Asegúrate de recibir onLogin como prop
   const navigate = useNavigate();
 
   const handleThemeToggle = () => {
-    setDarkMode(!darkMode);
-    if (!darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    setDarkMode(prev => {
+      const newMode = !prev;
+      document.documentElement.classList.toggle('dark', newMode);
+      return newMode;
+    });
   };
 
   const handleLoginSubmit = async (formData) => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      console.log('📤 Intentando login con datos:', {
+      console.log('Intentando login con datos:', {
         username: formData.username,
         password: formData.password ? '***' : 'vacío'
       });
-      
+
       const result = await authService.login({
-        username: formData.username,
+        username: formData.username.trim(),
         password: formData.password
       });
-      
+
       if (result.success) {
-        console.log('✅ Login exitoso, llamando onLogin...');
+        console.log('Login exitoso, redirigiendo...');
         
-        // IMPORTANTE: Llamar a onLogin para actualizar App.js
-        if (typeof onLogin === 'function') {
-          onLogin(); // Esto actualiza el estado en App.js
-        } else {
-          console.error('❌ onLogin no es una función:', onLogin);
-        }
+        // IMPORTANTE: Forzar una actualización del estado global
+        window.dispatchEvent(new CustomEvent('userLogin', {
+          detail: { user: result.user }
+        }));
         
-        // Redirigir al POS
-        console.log('🔄 Redirigiendo a /pos...');
-        navigate('/pos');
+        // Navegación con un pequeño delay para asegurar que el estado se actualice
+        setTimeout(() => {
+          navigate('/pos', { replace: true });
+        }, 50);
       }
     } catch (error) {
-      console.error('❌ Error completo en login:', error);
-      
-      let errorMessage = error.error || error.message || 'Error al iniciar sesión';
-      
-      if (error.status === 401) {
-        errorMessage = 'Usuario o contraseña incorrectos';
-      } else if (error.status === 403) {
-        errorMessage = 'Usuario inactivo o suspendido';
-      } else if (error.status === 0) {
-        errorMessage = 'No se puede conectar al servidor. Verifica que esté corriendo en http://localhost:5000';
-      }
-      
+      console.error('Error completo en login:', error);
+
+      let errorMessage = 'Usuario o contraseña incorrectos';
+      if (error.status === 403) errorMessage = 'Usuario inactivo o suspendido';
+      else if (error.status === 0 || error.isOffline) errorMessage = 'No se pudo conectar al servidor. Verifica tu conexión.';
+      else if (error.error || error.message) errorMessage = error.error || error.message;
+
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -73,34 +66,30 @@ const Login = ({ onLogin }) => { // <-- Asegúrate de recibir onLogin como prop
   const handleRegisterSubmit = async (formData) => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      // Prepara los datos para el backend
       const userData = {
-        nombre: formData.nombre,
-        apellido: formData.apellido,
-        email: formData.email || '',
-        telefono: formData.telefono || '',
-        dni: formData.dni || '',
+        nombre: formData.nombre.trim(),
+        apellido: formData.apellido.trim(),
+        email: formData.email?.trim() || '',
+        telefono: formData.telefono?.trim() || '',
+        dni: formData.dni?.trim() || '',
         cargo: formData.cargo,
-        usuario: formData.usuario,
+        usuario: formData.usuario.trim(),
         password: formData.password,
-        sucursal: formData.sucursal || ''
+        sucursal: formData.sucursal?.trim() || 'Principal'
       };
-      
-      console.log('📤 Enviando registro:', userData);
-      
+
       const result = await authService.register(userData);
-      
+
       if (result.success) {
-        // Cambiar a modo login después de registro exitoso
         setAuthMode('login');
         setError(null);
-        alert('✅ Usuario registrado exitosamente. Ahora puedes iniciar sesión.');
+        alert('Usuario registrado exitosamente. Ahora puedes iniciar sesión.');
       }
     } catch (error) {
-      console.error('❌ Error en registro:', error);
-      setError(error.error || 'Error al registrar usuario');
+      console.error('Error en registro desde login:', error);
+      setError(error.error || error.message || 'Error al registrar usuario');
     } finally {
       setLoading(false);
     }
@@ -109,14 +98,9 @@ const Login = ({ onLogin }) => { // <-- Asegúrate de recibir onLogin como prop
   return (
     <div className={darkMode ? 'dark' : ''}>
       <div className="min-h-screen bg-gray-50 dark:bg-dark-900 flex flex-col">
-        <Header 
-          isAuthenticated={false}
-          onThemeToggle={handleThemeToggle}
-          darkMode={darkMode}
-        />
-        
+        <Header isAuthenticated={false} onThemeToggle={handleThemeToggle} darkMode={darkMode} />
         <main className="flex-grow">
-          <AuthContainer 
+          <AuthContainer
             mode={authMode}
             onModeChange={setAuthMode}
             onLoginSubmit={handleLoginSubmit}
@@ -125,8 +109,7 @@ const Login = ({ onLogin }) => { // <-- Asegúrate de recibir onLogin como prop
             error={error}
           />
         </main>
-        
-        <Footer />
+        <Footer darkMode={darkMode} />
       </div>
     </div>
   );

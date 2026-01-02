@@ -1,4 +1,4 @@
-// src/App.js - VERSIÓN CORREGIDA CON BOTONES FUNCIONALES Y DRAG
+// src/App.js - VERSIÓN CORREGIDA
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { authService } from './services/api';
@@ -43,7 +43,6 @@ function App() {
 
   // Referencias para el contador
   const windowRef = useRef(null);
-  const dragAreaRef = useRef(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // ======================================================
@@ -91,7 +90,7 @@ function App() {
   }, []);
 
   // ======================================================
-  // VERIFICACIÓN DE AUTENTICACIÓN
+  // VERIFICACIÓN DE AUTENTICACIÓN Y EVENT LISTENER
   // ======================================================
   useEffect(() => {
     if (isInMaintenance) {
@@ -114,9 +113,11 @@ function App() {
               setUser(data.user);
             } else {
               authService.logout();
+              setIsAuthenticated(false);
             }
           } catch {
             authService.logout();
+            setIsAuthenticated(false);
           }
         }
       }
@@ -127,14 +128,30 @@ function App() {
   }, [isInMaintenance]);
 
   // ======================================================
+  // ESCUCHAR EVENTO DE LOGIN EXITOSO
+  // ======================================================
+  useEffect(() => {
+    const handleUserLogin = () => {
+      console.log('Evento userLogin recibido en App.jsx');
+      const authenticated = authService.isAuthenticated();
+      setIsAuthenticated(authenticated);
+      
+      if (authenticated) {
+        const currentUser = authService.getCurrentUser();
+        setUser(currentUser);
+      }
+    };
+
+    window.addEventListener('userLogin', handleUserLogin);
+
+    return () => {
+      window.removeEventListener('userLogin', handleUserLogin);
+    };
+  }, []);
+
+  // ======================================================
   // HANDLERS SIMPLIFICADOS
   // ======================================================
-  const handleLogin = () => {
-    const currentUser = authService.getCurrentUser();
-    setIsAuthenticated(true);
-    setUser(currentUser);
-  };
-
   const handleLogout = () => {
     authService.logout();
     setIsAuthenticated(false);
@@ -142,8 +159,9 @@ function App() {
   };
 
   const handleThemeToggle = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle('dark', !darkMode);
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    document.documentElement.classList.toggle('dark', newDarkMode);
   };
 
   const closeWindow = () => {
@@ -469,8 +487,6 @@ function App() {
               </div>
             </div>
           </div>
-
-          
         </div>
 
         {/* Footer */}
@@ -580,7 +596,7 @@ function App() {
         <Routes>
           <Route
             path="/login"
-            element={isAuthenticated ? <Navigate to="/pos" replace /> : <Login onLogin={handleLogin} />}
+            element={isAuthenticated ? <Navigate to="/pos" replace /> : <Login />}  
           />
           <Route
             path="/register"
