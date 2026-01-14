@@ -51,8 +51,8 @@ function App() {
   const FORCE_FULL_MAINTENANCE = false;
 
   // Fechas del mantenimiento
-  const MAINTENANCE_START = new Date('2025-12-31T23:00:00');
-  const MAINTENANCE_END = new Date('2026-01-01T03:00:00');
+  const MAINTENANCE_START = new Date('2026-01-05T23:00:00');
+  const MAINTENANCE_END = new Date('2026-01-11T03:00:00');
   const SHOW_WARNING_DAYS_BEFORE = 3;
 
   // ======================================================
