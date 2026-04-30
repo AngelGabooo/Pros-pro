@@ -1,15 +1,15 @@
-// src/services/api.js - VERSIÓN CORREGIDA
+// src/services/api.js - VERSIÓN COMPLETA SIN OMISIONES
 
 // ==================== CONFIGURACIÓN DE URL DEL BACKEND ====================
-// En desarrollo: localhost
-// En producción: la URL de tu backend desplegado en Vercel
-const API_BASE_URL = import.meta.env.VITE_API_URL?.trim() || 'http://localhost:5000/api';
+// En desarrollo: localhost | En producción: URL de Vercel
+// Agregamos limpieza agresiva para evitar el error de corchetes "]" visto en logs
+const getCleanBaseUrl = () => {
+  const rawUrl = import.meta.env.VITE_API_URL?.trim() || 'http://localhost:5000/api';
+  // Elimina cualquier residuo de formato markdown como ] ) ( [ y espacios
+  return rawUrl.replace(/[\]\)\(\[ \s]/g, "").replace(/\/+$/, "");
+};
 
-
-// Eliminar barra final si existe, para evitar duplicados
-const API_URL = API_BASE_URL.endsWith('/') 
-  ? API_BASE_URL.slice(0, -1) 
-  : API_BASE_URL;
+const API_URL = getCleanBaseUrl();
 
 console.log('🌍 API Base URL configurada:', API_URL);
 
@@ -45,7 +45,7 @@ const fetchAPI = async (endpoint, options = {}) => {
     const response = await fetch(`${API_URL}${cleanEndpoint}`, {
       ...options,
       headers,
-      credentials: 'include', // Necesario para cookies si usas sesiones (opcional)
+      credentials: 'include', 
     });
 
     // Manejar respuestas no JSON (errores del servidor, HTML, etc.)
@@ -75,8 +75,7 @@ const fetchAPI = async (endpoint, options = {}) => {
   } catch (error) {
     console.error(`❌ Fetch error para ${cleanEndpoint}:`, error);
 
-    // Error de conexión (servidor apagado, CORS, etc.)
-    if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+    if (error.name === 'TypeError' && (error.message.includes('Failed to fetch') || error.message.includes('fetch'))) {
       throw {
         status: 0,
         message: 'No se pudo conectar al servidor. Verifica tu conexión a internet o que el backend esté activo.',
@@ -84,8 +83,6 @@ const fetchAPI = async (endpoint, options = {}) => {
         isOffline: true
       };
     }
-
-    // Otros errores (JSON mal formado, etc.)
     throw error;
   }
 };
@@ -131,7 +128,6 @@ export const authService = {
       if (data.success && data.token && data.user) {
         console.log('✅ Login exitoso:', data.user.usuario);
         
-        // Guardar en localStorage con nombres consistentes
         localStorage.setItem('auth_token', data.token);
         localStorage.setItem('auth_user', JSON.stringify(data.user));
         localStorage.setItem('token', data.token); // Backup por compatibilidad
@@ -139,7 +135,6 @@ export const authService = {
         localStorage.setItem('tienda', data.user.databaseName || '');
         localStorage.setItem('lastLogin', new Date().toISOString());
         
-        // Disparar evento para notificar a App.jsx
         window.dispatchEvent(new CustomEvent('userLogin', {
           detail: { user: data.user }
         }));
@@ -157,8 +152,6 @@ export const authService = {
    */
   logout() {
     console.log('👋 Realizando logout...');
-    
-    // Limpiar todo el localStorage de forma exhaustiva
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
     localStorage.removeItem('token');
@@ -169,8 +162,6 @@ export const authService = {
     localStorage.removeItem('pos_recent_products');
     localStorage.removeItem('pos_sale_counter');
     localStorage.removeItem('pos_notifications');
-    
-    // Disparar evento para notificar a App.jsx
     window.dispatchEvent(new CustomEvent('userLogout'));
   },
 
@@ -180,9 +171,7 @@ export const authService = {
   isAuthenticated() {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
     const user = localStorage.getItem('auth_user') || localStorage.getItem('user');
-    
     if (!token || !user) return false;
-
     try {
       const userData = JSON.parse(user);
       return !!(token && userData && userData.id && userData.usuario);
@@ -196,7 +185,6 @@ export const authService = {
    */
   getCurrentUser() {
     try {
-      // Intentar con auth_user primero, luego con user por compatibilidad
       const userStr = localStorage.getItem('auth_user') || localStorage.getItem('user');
       return userStr ? JSON.parse(userStr) : null;
     } catch (error) {
@@ -219,18 +207,11 @@ export const authService = {
   async verifySession() {
     try {
       const token = getToken();
-      if (!token) {
-        return { success: false, error: 'No hay token' };
-      }
-
-      const response = await fetchAPI('/debug/check-auth');
-      return response;
+      if (!token) return { success: false, error: 'No hay token' };
+      return await fetchAPI('/debug/check-auth');
     } catch (error) {
       console.error('❌ Error verificando sesión:', error);
-      return {
-        success: false,
-        error: error.message || 'Sesión inválida o expirada'
-      };
+      return { success: false, error: error.message || 'Sesión inválida o expirada' };
     }
   },
 
@@ -240,7 +221,6 @@ export const authService = {
   async updateUserInfo(userData) {
     try {
       console.log('🔄 Actualizando perfil...', userData);
-      
       const data = await fetchAPI('/profile/update', {
         method: 'PUT',
         body: JSON.stringify(userData),
@@ -258,16 +238,11 @@ export const authService = {
           tiendaMensajeTicket: userData.tiendaMensajeTicket ?? currentUser.tiendaMensajeTicket ?? '¡Gracias por su compra! Vuelva pronto :)'
         };
 
-        // Actualizar en ambos lugares por compatibilidad
         localStorage.setItem('auth_user', JSON.stringify(updatedUser));
         localStorage.setItem('user', JSON.stringify(updatedUser));
-        
-        // Disparar evento para notificar a App.jsx
         window.dispatchEvent(new CustomEvent('userUpdated'));
-        
         console.log('✅ Perfil actualizado correctamente');
       }
-
       return data;
     } catch (error) {
       console.error('❌ Error actualizando perfil:', error);
@@ -276,17 +251,15 @@ export const authService = {
   },
 
   /**
-   * Cambiar contraseña (si tienes esta ruta en el backend)
+   * Cambiar contraseña
    */
   async changePassword(passwordData) {
     try {
       console.log('🔑 Cambiando contraseña...');
-      const data = await fetchAPI('/profile/change-password', {
+      return await fetchAPI('/profile/change-password', {
         method: 'PUT',
         body: JSON.stringify(passwordData),
       });
-      console.log('✅ Contraseña cambiada');
-      return data;
     } catch (error) {
       console.error('❌ Error cambiando contraseña:', error);
       throw error;
@@ -300,14 +273,11 @@ export const authService = {
     try {
       console.log('📥 Obteniendo perfil del servidor...');
       const data = await fetchAPI('/profile');
-      
       if (data.success && data.user) {
-        // Actualizar en ambos lugares por compatibilidad
         localStorage.setItem('auth_user', JSON.stringify(data.user));
         localStorage.setItem('user', JSON.stringify(data.user));
         console.log('✅ Perfil sincronizado');
       }
-      
       return data;
     } catch (error) {
       console.error('❌ Error obteniendo perfil:', error);
@@ -315,20 +285,14 @@ export const authService = {
     }
   },
 
-  /**
-   * Guardar token manualmente (para compatibilidad)
-   */
   saveToken(token) {
     localStorage.setItem('auth_token', token);
-    localStorage.setItem('token', token); // Backup
+    localStorage.setItem('token', token);
   },
 
-  /**
-   * Guardar usuario manualmente (para compatibilidad)
-   */
   saveUser(user) {
     localStorage.setItem('auth_user', JSON.stringify(user));
-    localStorage.setItem('user', JSON.stringify(user)); // Backup
+    localStorage.setItem('user', JSON.stringify(user));
   }
 };
 
@@ -336,8 +300,7 @@ export const authService = {
 export const productService = {
   async getAll() {
     try {
-      const data = await fetchAPI('/products');
-      return data;
+      return await fetchAPI('/products');
     } catch (error) {
       console.error('❌ Error obteniendo productos:', error);
       throw error;
@@ -346,11 +309,10 @@ export const productService = {
 
   async create(productData) {
     try {
-      const data = await fetchAPI('/products', {
+      return await fetchAPI('/products', {
         method: 'POST',
         body: JSON.stringify(productData),
       });
-      return data;
     } catch (error) {
       console.error('❌ Error creando producto:', error);
       throw error;
@@ -359,11 +321,10 @@ export const productService = {
 
   async update(id, productData) {
     try {
-      const data = await fetchAPI(`/products/${id}`, {
+      return await fetchAPI(`/products/${id}`, {
         method: 'PUT',
         body: JSON.stringify(productData),
       });
-      return data;
     } catch (error) {
       console.error('❌ Error actualizando producto:', error);
       throw error;
@@ -372,10 +333,9 @@ export const productService = {
 
   async delete(id) {
     try {
-      const data = await fetchAPI(`/products/${id}`, {
+      return await fetchAPI(`/products/${id}`, {
         method: 'DELETE',
       });
-      return data;
     } catch (error) {
       console.error('❌ Error eliminando producto:', error);
       throw error;
@@ -384,11 +344,10 @@ export const productService = {
 
   async updateStock(id, stock) {
     try {
-      const data = await fetchAPI(`/products/${id}/stock`, {
+      return await fetchAPI(`/products/${id}/stock`, {
         method: 'PUT',
         body: JSON.stringify({ stock }),
       });
-      return data;
     } catch (error) {
       console.error('❌ Error actualizando stock:', error);
       throw error;
@@ -400,11 +359,10 @@ export const productService = {
 export const saleService = {
   async create(saleData) {
     try {
-      const data = await fetchAPI('/sales', {
+      return await fetchAPI('/sales', {
         method: 'POST',
         body: JSON.stringify(saleData),
       });
-      return data;
     } catch (error) {
       console.error('❌ Error creando venta:', error);
       throw error;
@@ -413,8 +371,7 @@ export const saleService = {
 
   async getAll() {
     try {
-      const data = await fetchAPI('/sales');
-      return data;
+      return await fetchAPI('/sales');
     } catch (error) {
       console.error('❌ Error obteniendo ventas:', error);
       throw error;
@@ -423,8 +380,7 @@ export const saleService = {
 
   async getToday() {
     try {
-      const data = await fetchAPI('/sales/today');
-      return data;
+      return await fetchAPI('/sales/today');
     } catch (error) {
       console.error('❌ Error obteniendo ventas de hoy:', error);
       throw error;
@@ -433,8 +389,7 @@ export const saleService = {
 
   async getStats() {
     try {
-      const data = await fetchAPI('/sales/stats');
-      return data;
+      return await fetchAPI('/sales/stats');
     } catch (error) {
       console.error('❌ Error obteniendo estadísticas:', error);
       throw error;
@@ -446,8 +401,7 @@ export const saleService = {
 export const dashboardService = {
   async getStats() {
     try {
-      const data = await fetchAPI('/dashboard/stats');
-      return data;
+      return await fetchAPI('/dashboard/stats');
     } catch (error) {
       console.error('❌ Error obteniendo estadísticas del dashboard:', error);
       throw error;
@@ -456,8 +410,7 @@ export const dashboardService = {
 
   async getAlertas() {
     try {
-      const data = await fetchAPI('/dashboard/alertas');
-      return data;
+      return await fetchAPI('/dashboard/alertas');
     } catch (error) {
       console.error('❌ Error obteniendo alertas:', error);
       throw error;
@@ -466,8 +419,7 @@ export const dashboardService = {
 
   async getMetodosPago(periodo = 'hoy') {
     try {
-      const data = await fetchAPI(`/dashboard/metodos-pago?periodo=${periodo}`);
-      return data;
+      return await fetchAPI(`/dashboard/metodos-pago?periodo=${periodo}`);
     } catch (error) {
       console.error('❌ Error obteniendo métodos de pago:', error);
       throw error;
@@ -479,16 +431,11 @@ export const dashboardService = {
 export const reportService = {
   async generateSalesReport(reportData) {
     try {
-      // Aquí implementarías la lógica para generar el reporte
       console.log('📊 Generando reporte de ventas:', reportData);
-      
-      // Esto es un placeholder - deberías implementar según tu backend
-      const data = await fetchAPI('/sales/report/daily', {
+      return await fetchAPI('/sales/report/daily', {
         method: 'POST',
         body: JSON.stringify(reportData),
       });
-      
-      return data;
     } catch (error) {
       console.error('❌ Error generando reporte:', error);
       throw error;
@@ -498,14 +445,10 @@ export const reportService = {
   async generateDetailedReport(reportData) {
     try {
       console.log('📋 Generando reporte detallado:', reportData);
-      
-      // Esto es un placeholder - deberías implementar según tu backend
-      const data = await fetchAPI('/sales/report/detailed', {
+      return await fetchAPI('/sales/report/detailed', {
         method: 'POST',
         body: JSON.stringify(reportData),
       });
-      
-      return data;
     } catch (error) {
       console.error('❌ Error generando reporte detallado:', error);
       throw error;
@@ -513,5 +456,4 @@ export const reportService = {
   }
 };
 
-// Exportar también el helper para otros servicios (productos, ventas, etc.)
 export { fetchAPI, API_URL };
