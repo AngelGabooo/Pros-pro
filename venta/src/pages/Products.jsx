@@ -893,11 +893,13 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
           </div>
         </Modal>
       )}
-      {showEditModal && (
+      
+            {/* ==================== MODAL PARA AGREGAR NUEVO PRODUCTO ==================== */}
+      {showAddModal && (
         <Modal
-          isOpen={showEditModal}
-          onClose={() => setShowEditModal(false)}
-          title="Editar Producto"
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          title="Agregar Nuevo Producto"
           size="lg"
         >
           <div className="space-y-4">
@@ -908,36 +910,36 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
                 </label>
                 <Input
                   type="text"
-                  value={editProduct.name}
-                  onChange={(e) => setEditProduct({ ...editProduct, name: e.target.value })}
-                  placeholder="Ej: Leche Gloria 1L"
+                  value={newProduct.name}
+                  onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                  placeholder="Ej: Arroz Costeño 5kg"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Código Interno *
+                  Código Interno (opcional)
                 </label>
                 <Input
                   type="text"
-                  value={editProduct.code}
-                  onChange={(e) => setEditProduct({ ...editProduct, code: e.target.value })}
-                  placeholder="Ej: PROD001"
+                  value={newProduct.code}
+                  onChange={(e) => setNewProduct({ ...newProduct, code: e.target.value })}
+                  placeholder="Se generará automáticamente si se deja vacío"
                 />
               </div>
             </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Precio (MXN) *
+                  Precio *
                 </label>
                 <Input
                   type="number"
-                  value={editProduct.price}
-                  onChange={(e) => setEditProduct({ ...editProduct, price: parseFloat(e.target.value) || 0 })}
+                  value={newProduct.price}
+                  onChange={(e) => setNewProduct({ ...newProduct, price: parseFloat(e.target.value) || 0 })}
                   placeholder="0.00"
                   step="0.01"
                   min="0"
-                  prefix="$"
                 />
               </div>
               <div>
@@ -946,21 +948,22 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
                 </label>
                 <Input
                   type="text"
-                  value={editProduct.category}
-                  onChange={(e) => setEditProduct({ ...editProduct, category: e.target.value })}
-                  placeholder="Ej: Lácteos, Ropa, Ropa"
+                  value={newProduct.category}
+                  onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
+                  placeholder="Ej: Alimentos, Bebidas"
                 />
               </div>
             </div>
+
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Stock Actual
+                  Stock Inicial
                 </label>
                 <Input
                   type="number"
-                  value={editProduct.stock}
-                  onChange={(e) => setEditProduct({ ...editProduct, stock: parseInt(e.target.value) || 0 })}
+                  value={newProduct.stock}
+                  onChange={(e) => setNewProduct({ ...newProduct, stock: parseInt(e.target.value) || 0 })}
                   placeholder="0"
                   min="0"
                 />
@@ -971,46 +974,45 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
                 </label>
                 <Input
                   type="number"
-                  value={editProduct.minStock}
-                  onChange={(e) => setEditProduct({ ...editProduct, minStock: parseInt(e.target.value) || 5 })}
+                  value={newProduct.minStock}
+                  onChange={(e) => setNewProduct({ ...newProduct, minStock: parseInt(e.target.value) || 5 })}
                   placeholder="5"
                   min="0"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Código de Barras
+                  Código de Barras (opcional)
                 </label>
                 <Input
                   type="text"
-                  value={editProduct.barcode}
-                  onChange={(e) => setEditProduct({ ...editProduct, barcode: e.target.value })}
+                  value={newProduct.barcode}
+                  onChange={(e) => setNewProduct({ ...newProduct, barcode: e.target.value })}
                   placeholder="Opcional"
-                  icon={IconBarcode}
                 />
               </div>
             </div>
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <div className="flex justify-end space-x-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowEditModal(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  variant="success"
-                  onClick={handleSaveEdit}
-                  icon={IconSave}
-                  loading={loading}
-                >
-                  Guardar Cambios
-                </Button>
-              </div>
+
+            <div className="mt-6 pt-6 border-t border-gray-200 flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowAddModal(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleAddProduct}
+                loading={loading}
+                icon={IconSave}
+              >
+                Guardar Producto
+              </Button>
             </div>
           </div>
         </Modal>
       )}
+      
       {showLowStockModal && (
         <Modal
           isOpen={showLowStockModal}

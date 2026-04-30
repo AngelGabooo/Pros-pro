@@ -3,7 +3,8 @@
 // ==================== CONFIGURACIÓN DE URL DEL BACKEND ====================
 // En desarrollo: localhost
 // En producción: la URL de tu backend desplegado en Vercel
-const API_BASE_URL = import.meta.env.VITE_API_URL?.trim() || 'https://pros-pro-api.vercel.app/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL?.trim() || 'http://localhost:5000/api';
+
 
 // Eliminar barra final si existe, para evitar duplicados
 const API_URL = API_BASE_URL.endsWith('/') 

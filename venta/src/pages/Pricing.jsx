@@ -42,15 +42,21 @@ const Pricing = ({ darkMode = false, onThemeToggle, isAuthenticated = false, use
   const navigate = useNavigate();
   const [billingCycle, setBillingCycle] = useState('monthly');
   const [selectedPlan, setSelectedPlan] = useState('startup');
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [selectedPlanName, setSelectedPlanName] = useState('');
 
   const handleSelectFreePlan = () => {
     navigate('/register');
   };
 
+  const handleShowContact = (planName) => {
+    setSelectedPlanName(planName);
+    setShowContactModal(true);
+  };
+
   const handleSelectPaidPlan = (planName) => {
     setSelectedPlan(planName);
-    // En un entorno real, aquí redirigirías al checkout/pago
-    alert(`Redirigiendo al checkout para el plan ${planName.toUpperCase()}`);
+    handleShowContact(planName);
   };
 
   const plans = [
@@ -117,7 +123,7 @@ const Pricing = ({ darkMode = false, onThemeToggle, isAuthenticated = false, use
       highlight: 'MEJOR VALOR',
       buttonText: 'Contratar Plan',
       buttonVariant: 'primary',
-      onClick: () => handleSelectPaidPlan('negocio'),
+      onClick: () => handleSelectPaidPlan('Negocio'),
       trial: '14 días de prueba',
       popular: false
     },
@@ -151,7 +157,7 @@ const Pricing = ({ darkMode = false, onThemeToggle, isAuthenticated = false, use
       highlight: 'PROFESIONAL',
       buttonText: 'Contactar Ventas',
       buttonVariant: 'outline',
-      onClick: () => handleSelectPaidPlan('empresarial'),
+      onClick: () => handleSelectPaidPlan('Empresarial'),
       trial: 'Demo personalizada',
       popular: false
     }
@@ -605,9 +611,8 @@ const Pricing = ({ darkMode = false, onThemeToggle, isAuthenticated = false, use
                   <p className="text-gray-600 text-sm">
                     <strong>¿Necesitas ayuda para elegir?</strong> Contáctanos: 
                     <span className="text-blue-600 font-medium ml-2">
-                      <IconBrandWhatsapp className="inline mr-1" size={14} /> WhatsApp: 55 1234 5678 • 
-                      <IconPhone className="inline mx-2" size={14} /> Teléfono: 800 123 4567 • 
-                      <IconMail className="inline mx-2" size={14} /> Email: ventas@pospro.mx
+                      <IconBrandWhatsapp className="inline mr-1" size={14} /> WhatsApp: 81 4438 4806 • 
+                      <IconMail className="inline mx-2" size={14} /> Email: prospoinfo@gmail.com
                     </span>
                   </p>
                 </div>
@@ -617,9 +622,66 @@ const Pricing = ({ darkMode = false, onThemeToggle, isAuthenticated = false, use
         </main>
 
         <Footer />
+
+        {/* Modal de contacto */}
+        {showContactModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden transform transition-all">
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold flex items-center">
+                    <IconBrandWhatsapp size={24} className="mr-3" />
+                    Contacta con el dueño
+                  </h3>
+                  <button 
+                    onClick={() => setShowContactModal(false)}
+                    className="text-white/80 hover:text-white focus:outline-none"
+                  >
+                    <IconX size={24} />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="p-6">
+                <p className="text-gray-700 dark:text-gray-300 mb-6">
+                  Para adquirir el plan <strong className="text-indigo-600">{selectedPlanName}</strong> (mensual o anual), 
+                  por favor ponte en contacto directamente con el dueño de la página.
+                </p>
+                
+                <div className="space-y-4 mb-6">
+                  <a 
+                    href="https://wa.me/528144384806?text=Hola%20Ángel%20Gabriel,%20estoy%20interesado%20en%20el%20plan%20" 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-3 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+                  >
+                    <IconBrandWhatsapp size={22} />
+                    Escribir por WhatsApp: 81 4438 4806
+                  </a>
+                  
+                  <a 
+                    href={`mailto:prospoinfo@gmail.com?subject=Interesado%20en%20plan%20${encodeURIComponent(selectedPlanName)}&body=Hola%20Ángel%20Gabriel,%0A%0AEstoy%20interesado%20en%20adquirir%20el%20plan%20${encodeURIComponent(selectedPlanName)}.%0APor%20favor%20indícame%20los%20pasos%20a%20seguir.%0A%0AGracias!`}
+                    className="flex items-center justify-center gap-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-medium py-3 px-6 rounded-lg transition-colors"
+                  >
+                    <IconMail size={22} />
+                    Enviar correo a prospoinfo@gmail.com
+                  </a>
+                </div>
+                
+                <button
+                  onClick={() => setShowContactModal(false)}
+                  className="w-full text-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-sm"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 export default Pricing;
+

@@ -466,104 +466,121 @@ useEffect(() => {
     }
   };
   
-  const startScanner = () => {
-    setShowScanner(true);
-    setScannerActive(true);
-    setScanning(true);
-    setScanResult('');
-    setTimeout(() => {
-      const container = document.getElementById('scanner-container');
-      if (!container) return;
-      Quagga.init({
-        inputStream: {
-          name: "Live",
-          type: "LiveStream",
-          target: container,
-          constraints: {
-            facingMode: "environment",
-            width: { min: 640 },
-            height: { min: 480 }
-          }
-        },
-        locator: {
-          patchSize: "medium",
-          halfSample: true
-        },
-        numOfWorkers: navigator.hardwareConcurrency || 4,
-        frequency: 10,
-        decoder: {
-          readers: [
-            "ean_reader",
-            "ean_8_reader",
-            "code_128_reader",
-            "code_39_reader",
-            "upc_reader",
-            "codabar_reader"
-          ]
-        },
-        locate: true
-      }, (err) => {
-        if (err) {
-          console.error('Error iniciando cámara:', err);
-          showAlert({
-            type: 'error',
-            title: 'Acceso a cámara denegado',
-            message: 'Permite el acceso a la cámara para escanear códigos de barras.',
-            autoClose: 6000
-          });
-          stopScanner();
-          return;
-        }
-        Quagga.start();
-      });
-      Quagga.onDetected((data) => {
-        const code = data.codeResult.code;
-        if (code) {
-          Quagga.stop();
-          handleBarcodeDetected(code);
-        }
-      });
-    }, 500);
-  };
+ // ==================== ESCÁNER CORREGIDO Y MÁS ESTABLE ====================
+const startScanner = () => {
+  setShowScanner(true);
+  setScanning(true);
   
-  const handleBarcodeDetected = (code) => {
-    setScanResult(code);
-    setScanning(false);
-    const foundProduct = products.find(p => p.barcode === code.trim());
-    if (foundProduct) {
-      addToCart(foundProduct);
-      showAlert({
-        type: 'success',
-        title: '¡Producto encontrado!',
-        message: `${foundProduct.name}\nAgregado al carrito`,
-        autoClose: 4000
-      });
-      setTimeout(() => {
+  setTimeout(() => {
+    const container = document.getElementById('scanner-container');
+    if (!container) return;
+
+    Quagga.init({
+      inputStream: {
+        name: "Live",
+        type: "LiveStream",
+        target: container,
+        constraints: {
+          facingMode: "environment",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          focusMode: "continuous" // Mejora el enfoque en móviles
+        },
+      },
+      locator: {
+        patchSize: "medium",
+        halfSample: true
+      },
+      numOfWorkers: navigator.hardwareConcurrency || 4,
+      // Frecuencia reducida para dar tiempo al procesador a validar
+      frequency: 5, 
+      decoder: {
+        // Limitamos los lectores solo a los más comunes en MX/tiendas
+        readers: ["ean_reader", "code_128_reader", "upc_reader"] 
+      },
+      locate: true
+    }, (err) => {
+      if (err) {
         stopScanner();
-      }, 1500);
-    } else {
-      showAlert({
-        type: 'warning',
-        title: 'Producto no encontrado',
-        message: `Código: ${code}\nNo está registrado en el inventario.`,
-        autoClose: 6000
-      });
-      setTimeout(() => {
+        return;
+      }
+      Quagga.start();
+    });
+
+    // SISTEMA DE VALIDACIÓN (Evita códigos basura)
+    let lastResult = { code: null, count: 0 };
+    
+    Quagga.onDetected((result) => {
+      const code = result.codeResult.code;
+      
+      // Si el código es el mismo 3 veces seguidas, es real (Filtro de confianza)
+      if (code === lastResult.code) {
+        lastResult.count++;
+      } else {
+        lastResult.code = code;
+        lastResult.count = 1;
+      }
+
+      if (lastResult.count >= 3) {
+        lastResult.count = 0; // Reset
+        handleBarcodeDetected(code);
+      }
+    });
+  }, 500);
+};
+
+const handleBarcodeDetected = (code) => {
+  // Evitar lecturas múltiples si ya estamos procesando uno
+  if (!scanning) return; 
+  
+  setScanning(false);
+  Quagga.stop(); // Pausamos motor de lectura inmediatamente
+
+  const foundProduct = products.find(p => 
+    (p.barcode && p.barcode.trim() === code.trim()) || 
+    (p.code && p.code.trim() === code.trim())
+  );
+
+  if (foundProduct) {
+    addToCart(foundProduct);
+    showAlert({
+      type: 'success',
+      title: '¡Producto agregado!',
+      message: `${foundProduct.name}`,
+      autoClose: 1500
+    });
+    
+    // Esperar un momento antes de permitir escanear el siguiente
+    setTimeout(() => {
+      if (showScanner) {
         setScanning(true);
         Quagga.start();
-      }, 2500);
-    }
-  };
-  
-  const stopScanner = () => {
-    if (typeof Quagga !== 'undefined') {
-      Quagga.stop();
-    }
-    setShowScanner(false);
-    setScannerActive(false);
-    setScanning(false);
-    setScanResult('');
-  };
+      }
+    }, 2000); 
+  } else {
+    showAlert({
+      type: 'warning',
+      title: 'No encontrado',
+      message: `Código: ${code}`,
+      autoClose: 2000
+    });
+
+    // Reanudar después de mostrar el aviso
+    setTimeout(() => {
+      if (showScanner) {
+        setScanning(true);
+        Quagga.start();
+      }
+    }, 2500);
+  }
+};
+
+const stopScanner = () => {
+  Quagga.stop();
+  setShowScanner(false);
+  setScanning(false);
+  setScanResult('');
+};
   
   const handleScan = () => {
     startScanner();
@@ -1014,47 +1031,42 @@ useEffect(() => {
         message={alertState.message}
         autoClose={alertState.autoClose}
       />
+      
       {showScanner && (
-        <Modal
-          isOpen={showScanner}
-          onClose={stopScanner}
-          title="Escanear Código de Barras"
-          size="lg"
-        >
-          <div className="text-center p-6">
-            <div className="relative mx-auto max-w-md">
-              <div id="scanner-container" className="w-full h-96 rounded-xl overflow-hidden border-4 border-primary-500 shadow-2xl bg-black">
-              </div>
-
-              {scanning && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 pointer-events-none">
-                  <div className="text-white text-xl font-bold animate-pulse">
-                    Escaneando...
-                  </div>
-                </div>
-              )}
-              {scanResult && (
-                <div className="mt-6 p-4 bg-success-100 border-2 border-success-500 rounded-lg">
-                  <p className="text-success-800 font-bold text-lg">¡Código detectado!</p>
-                  <p className="text-2xl font-mono mt-2">{scanResult}</p>
-                </div>
-              )}
-            </div>
-            <div className="mt-8 text-gray-600">
-              <p className="font-medium">Apunta la cámara al código de barras</p>
-              <p className="text-sm mt-2">Soportados: EAN, UPC, Code 128, Code 39</p>
-            </div>
-            <div className="mt-8 flex justify-center gap-4">
-              <Button
-                variant="outline"
-                onClick={stopScanner}
-              >
-                Cancelar
-              </Button>
+  <Modal
+    isOpen={showScanner}
+    onClose={stopScanner}
+    title="Escanear Código de Barras"
+    size="lg"
+  >
+    <div className="text-center p-4">
+      <div className="relative mx-auto max-w-lg">
+        <div 
+          id="scanner-container" 
+          className="w-full aspect-video bg-black rounded-2xl overflow-hidden border-4 border-primary-500 shadow-xl"
+        />
+        
+        {scanning && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-2xl">
+            <div className="text-white text-xl font-semibold animate-pulse">
+              Escaneando...
             </div>
           </div>
-        </Modal>
-      )}
+        )}
+      </div>
+
+      <div className="mt-6 text-sm text-gray-600">
+        Apunta la cámara al código de barras del producto
+      </div>
+
+      <div className="mt-8">
+        <Button variant="outline" onClick={stopScanner}>
+          Cancelar Escaneo
+        </Button>
+      </div>
+    </div>
+  </Modal>
+)}
     </div>
   );
 };
