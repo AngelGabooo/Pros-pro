@@ -8,28 +8,26 @@ import Loader from '../components/atoms/Loader';
 import Input from '../components/atoms/Input';
 import Alert from '../components/atoms/Alert';
 import Modal from '../components/atoms/Modal';
-import AlertModal from '../components/molecules/AlertModal'; // ← Importamos tu AlertModal bonito
+import AlertModal from '../components/molecules/AlertModal';
 import { getCategoryIcon, getCategoryColor } from '../data/categoryIcons';
-// Iconos necesarios para Products.jsx (todos verificados como existentes en Tabler Icons)
 import {
-  IconArrowLeft, // ← Volver al POS
-  IconPlus, // ← Agregar nuevo
-  IconUpload as IconExport, // ← Exportar
-  IconDownload as IconImport, // ← Importar
-  IconPackage, // ← Estadísticas total productos, vacío y caja cerrada
-  IconAlertTriangle, // ← Stock bajo
-  IconX, // ← Sin stock
-  IconTag, // ← Categorías
-  IconSearch, // ← Búsqueda
-  IconFilter, // ← Filtro
-  IconRefresh as IconUndo, // ← Actualizar
-  IconEdit, // ← Editar
-  IconTruckDelivery as IconRestock, // ← Reabastecer (camión de entrega, perfecto para restock)
-  IconTrash, // ← Eliminar
-  IconBarcode, // ← Código de barras
-  IconDeviceFloppy as IconSave // ← Guardar cambios
+  IconArrowLeft,
+  IconPlus,
+  IconUpload as IconExport,
+  IconDownload as IconImport,
+  IconPackage,
+  IconAlertTriangle,
+  IconX,
+  IconTag,
+  IconSearch,
+  IconFilter,
+  IconRefresh as IconUndo,
+  IconEdit,
+  IconTruckDelivery as IconRestock,
+  IconTrash,
+  IconBarcode,
+  IconDeviceFloppy as IconSave
 } from '@tabler/icons-react';
-// === NUEVO: Importar el servicio de productos ===
 import { productService } from '../services/productService';
 
 const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) => {
@@ -42,7 +40,6 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showLowStockModal, setShowLowStockModal] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(true);
-  // === AÑADIDO: Estado para loading de operaciones individuales (editar, eliminar, agregar, etc.) ===
   const [loading, setLoading] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'ascending' });
   const [filterCategory, setFilterCategory] = useState('todos');
@@ -62,7 +59,6 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
     minStock: 5,
     barcode: ''
   });
-  // === NUEVO: Estados para el modal de agregar producto ===
   const [showAddModal, setShowAddModal] = useState(false);
   const [newProduct, setNewProduct] = useState({
     name: '',
@@ -73,13 +69,17 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
     minStock: 5,
     barcode: ''
   });
-  // === NUEVO: Estado para AlertModal bonito ===
   const [alertState, setAlertState] = useState({
     isOpen: false,
     type: 'success',
     title: '',
     message: ''
   });
+
+  // ==================== ESTADOS PARA PAGINACIÓN ====================
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10); // Cantidad de productos por página
+
   const showAlert = ({ type = 'success', title = '', message = '' }) => {
     setAlertState({
       isOpen: true,
@@ -88,45 +88,51 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
       message
     });
   };
+
   const closeAlert = () => {
     setAlertState(prev => ({ ...prev, isOpen: false }));
   };
-  // === MODIFICADO: Cargar productos desde la API real ===
+
+  // Cargar productos desde la API
   useEffect(() => {
     loadProducts();
   }, []);
-  // === NUEVO: Calcular estadísticas cada vez que cambien los productos ===
+
+  // Calcular estadísticas cada vez que cambien los productos
   useEffect(() => {
-    calculateStats(products); // ← ¡ESTA LÍNEA ES LA CLAVE!
+    calculateStats(products);
   }, [products]);
-  // === NUEVO: AUTO-REFRESH AUTOMÁTICO (polling + eventos) ===
+
+  // Auto-refresh automático (polling + eventos)
   useEffect(() => {
-    // Polling: recargar productos cada 15 segundos
     const pollingInterval = setInterval(() => {
       loadProducts();
     }, 15000);
-    // Listener para evento personalizado disparado por el POS
+
     const handleStockUpdate = () => {
       loadProducts();
     };
     window.addEventListener('stockUpdated', handleStockUpdate);
-    // Listener para cambios en localStorage
+
     const handleStorageChange = (e) => {
       if (e.key === 'lastSale') {
         loadProducts();
       }
     };
     window.addEventListener('storage', handleStorageChange);
-    // Cleanup al desmontar el componente
+
     return () => {
       clearInterval(pollingInterval);
       window.removeEventListener('stockUpdated', handleStockUpdate);
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
+
+  // Filtrar y ordenar productos (sin paginación aquí)
   useEffect(() => {
     filterAndSortProducts();
   }, [searchQuery, products, sortConfig, filterCategory]);
+
   const loadProducts = async () => {
     setLoadingProducts(true);
     try {
@@ -145,7 +151,6 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
           barcode: p.codigoBarra || ''
         }));
         setProducts(mapped);
-        // ← Opcional: también aquí para que sea inmediato
         calculateStats(mapped);
       } else {
         console.error('Respuesta inválida del servidor:', response);
@@ -166,18 +171,17 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
         message: message + '\nUsando datos locales como respaldo.',
         autoClose: 8000
       });
-      // fallback
-      const fallback = [
-        // tus productos de ejemplo
-      ];
+      const fallback = [];
       setProducts(fallback);
-      calculateStats(fallback); // ← también aquí
+      calculateStats(fallback);
     } finally {
       setLoadingProducts(false);
     }
   };
+
   const filterAndSortProducts = () => {
-    let filtered = products;
+    let filtered = [...products];
+
     if (searchQuery.trim()) {
       filtered = filtered.filter(product =>
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -186,11 +190,13 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
         (product.barcode && product.barcode.includes(searchQuery))
       );
     }
+
     if (filterCategory !== 'todos') {
       filtered = filtered.filter(product =>
         product.category.toLowerCase() === filterCategory.toLowerCase()
       );
     }
+
     filtered = [...filtered].sort((a, b) => {
       const aValue = a[sortConfig.key];
       const bValue = b[sortConfig.key];
@@ -204,8 +210,11 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
           : bValue - aValue;
       }
     });
+
     setFilteredProducts(filtered);
+    setCurrentPage(1); // Resetear a primera página cuando cambian los filtros
   };
+
   const calculateStats = (productsList) => {
     const total = productsList.length;
     const lowStock = productsList.filter(p => p.stock <= p.minStock && p.stock > 0).length;
@@ -218,6 +227,7 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
       categories
     });
   };
+
   const handleSort = (key) => {
     let direction = 'ascending';
     if (sortConfig.key === key && sortConfig.direction === 'ascending') {
@@ -225,11 +235,12 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
     }
     setSortConfig({ key, direction });
   };
+
   const handleEdit = (product) => {
     setEditProduct({ ...product });
     setShowEditModal(true);
   };
-  // === MODIFICADO: Guardar edición usando API + AlertModal ===
+
   const handleSaveEdit = async () => {
     if (!editProduct.name || !editProduct.price || !editProduct.code) {
       showAlert({
@@ -250,7 +261,7 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
         stockMinimo: editProduct.minStock,
         codigoBarra: editProduct.barcode?.trim() || null
       };
-
+    
       const response = await productService.update(editProduct.id, apiProduct);
       if (response.success) {
         await loadProducts();
@@ -271,11 +282,12 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
       setLoading(false);
     }
   };
+
   const handleDelete = (product) => {
     setSelectedProduct(product);
     setShowDeleteModal(true);
   };
-  // === MODIFICADO: Eliminar usando API + AlertModal ===
+
   const confirmDelete = async () => {
     setLoading(true);
     try {
@@ -300,6 +312,7 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
       setLoading(false);
     }
   };
+
   const handleStockUpdate = async (productId, newStock) => {
     setLoading(true);
     try {
@@ -320,12 +333,14 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
       setLoading(false);
     }
   };
+
   const handleRestock = (product) => {
     const newStock = prompt(`Ingresa la nueva cantidad de stock para ${product.name}:`, product.stock);
     if (newStock !== null && !isNaN(newStock) && newStock >= 0) {
       handleStockUpdate(product.id, newStock);
     }
   };
+
   const handleLowStockRestock = async () => {
     const lowStockProducts = products.filter(p => p.stock <= p.minStock);
     for (const product of lowStockProducts) {
@@ -340,6 +355,7 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
     }
     setShowLowStockModal(false);
   };
+
   const exportProducts = () => {
     const dataStr = JSON.stringify(products, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
@@ -354,6 +370,7 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
       message: 'Tu inventario se descargó como archivo JSON.'
     });
   };
+
   const importProducts = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -389,9 +406,11 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
     };
     input.click();
   };
+
   const handleBack = () => {
     navigate('/pos');
   };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('es-PE', {
       style: 'currency',
@@ -399,7 +418,7 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
       minimumFractionDigits: 2
     }).format(amount);
   };
-  // === FUNCIÓN ACTUALIZADA Y CORRECTA PARA AGREGAR PRODUCTO ===
+
   const handleAddProduct = async () => {
     if (!newProduct.name || !newProduct.price) {
       showAlert({
@@ -411,22 +430,20 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
     }
     setLoading(true);
     try {
-      // Enviar datos al backend - el backend ahora maneja el código automático
       const apiProduct = {
         nombre: newProduct.name.trim(),
-        codigoInterno: newProduct.code?.trim() || '', // Vacío para que el backend lo genere
+        codigoInterno: newProduct.code?.trim() || '',
         precio: parseFloat(newProduct.price),
         costo: 0,
         categoria: newProduct.category.trim() || 'General',
         stock: parseInt(newProduct.stock) || 0,
         stockMinimo: parseInt(newProduct.minStock) || 5,
-        // Solo enviar barcode si tiene valor, sino no enviar el campo
         ...(newProduct.barcode?.trim() && {
           codigoBarra: newProduct.barcode.trim()
         })
       };
       const response = await productService.create(apiProduct);
-
+     
       if (response.success) {
         await loadProducts();
         setShowAddModal(false);
@@ -439,7 +456,7 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
           minStock: 5,
           barcode: ''
         });
-
+       
         showAlert({
           type: 'success',
           title: '¡Producto agregado!',
@@ -456,16 +473,12 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
       }
     } catch (error) {
       console.error('Error completo:', error);
-
-      // Mensajes más específicos
       let msg = error.error || 'No se pudo guardar el producto.';
-
       if (error.error?.includes('código interno')) {
         msg = 'Ya existe un producto con ese código interno.\nDeja el campo vacío para generar uno automático.';
       } else if (error.error?.includes('código de barras')) {
         msg = 'Ya existe un producto con ese código de barras.\nPrueba con otro o déjalo vacío.';
       }
-
       showAlert({
         type: 'error',
         title: 'Error al agregar',
@@ -475,6 +488,30 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
       setLoading(false);
     }
   };
+
+  // ==================== LÓGICA DE PAGINACIÓN ====================
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+
+  const paginate = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    document.getElementById('products-table')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
   if (loadingProducts && products.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -485,6 +522,7 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
       </div>
     );
   }
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header
@@ -543,6 +581,8 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
               </Button>
             </div>
           </div>
+
+          {/* Tarjetas de estadísticas */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <Card className="bg-white">
               <div className="flex items-center">
@@ -557,16 +597,12 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
             </Card>
             <Card className={`bg-white ${stats.lowStock > 0 ? 'border-warning-300' : ''}`}>
               <div className="flex items-center">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center mr-4 ${stats.lowStock > 0 ? 'bg-warning-100' : 'bg-success-100'
-                  }`}>
-                  <IconAlertTriangle className={
-                    stats.lowStock > 0 ? 'text-warning-500' : 'text-success-500'
-                  } size={20} />
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center mr-4 ${stats.lowStock > 0 ? 'bg-warning-100' : 'bg-success-100'}`}>
+                  <IconAlertTriangle className={stats.lowStock > 0 ? 'text-warning-500' : 'text-success-500'} size={20} />
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Stock Bajo</p>
-                  <p className={`text-2xl font-bold ${stats.lowStock > 0 ? 'text-warning-600' : 'text-success-600'
-                    }`}>
+                  <p className={`text-2xl font-bold ${stats.lowStock > 0 ? 'text-warning-600' : 'text-success-600'}`}>
                     {stats.lowStock}
                   </p>
                 </div>
@@ -574,16 +610,12 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
             </Card>
             <Card className={`bg-white ${stats.outOfStock > 0 ? 'border-red-300' : ''}`}>
               <div className="flex items-center">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center mr-4 ${stats.outOfStock > 0 ? 'bg-red-100' : 'bg-gray-100'
-                  }`}>
-                  <IconX className={
-                    stats.outOfStock > 0 ? 'text-red-500' : 'text-gray-500'
-                  } size={20} />
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center mr-4 ${stats.outOfStock > 0 ? 'bg-red-100' : 'bg-gray-100'}`}>
+                  <IconX className={stats.outOfStock > 0 ? 'text-red-500' : 'text-gray-500'} size={20} />
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Sin Stock</p>
-                  <p className={`text-2xl font-bold ${stats.outOfStock > 0 ? 'text-red-600' : 'text-gray-600'
-                    }`}>
+                  <p className={`text-2xl font-bold ${stats.outOfStock > 0 ? 'text-red-600' : 'text-gray-600'}`}>
                     {stats.outOfStock}
                   </p>
                 </div>
@@ -601,6 +633,8 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
               </div>
             </Card>
           </div>
+
+          {/* Filtros y búsqueda */}
           <Card className="mb-6">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
@@ -652,6 +686,8 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
               </div>
             </div>
           </Card>
+
+          {/* Tabla de productos */}
           <Card
             title="Productos en Inventario"
             subtitle={`Mostrando ${filteredProducts.length} de ${products.length} productos (incluye agotados)`}
@@ -674,153 +710,200 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
                 </Button>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">
-                        Producto
-                      </th>
-                      <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">
-                        Código
-                      </th>
-                      <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">
-                        Categoría
-                      </th>
-                      <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">
-                        Precio
-                      </th>
-                      <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">
-                        Stock
-                      </th>
-                      <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">
-                        Mínimo
-                      </th>
-                      <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredProducts.map(product => {
-                      const CategoryIcon = getCategoryIcon(product.category);
-                      const categoryColor = getCategoryColor(product.category);
-                      const isLowStock = product.stock <= product.minStock && product.stock > 0;
-                      const isOutOfStock = product.stock === 0;
-                      return (
-                        <tr key={product.id} className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${isOutOfStock ? 'bg-red-50' : ''}`}>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center">
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${categoryColor}`}>
-                                <CategoryIcon size={18} />
+              <>
+                <div className="overflow-x-auto" id="products-table">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="py-3 px-4 text-left text-sm font-medium text-gray-700 cursor-pointer" onClick={() => handleSort('name')}>
+                          Producto {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? '↑' : '↓')}
+                        </th>
+                        <th className="py-3 px-4 text-left text-sm font-medium text-gray-700 cursor-pointer" onClick={() => handleSort('code')}>
+                          Código {sortConfig.key === 'code' && (sortConfig.direction === 'ascending' ? '↑' : '↓')}
+                        </th>
+                        <th className="py-3 px-4 text-left text-sm font-medium text-gray-700 cursor-pointer" onClick={() => handleSort('category')}>
+                          Categoría {sortConfig.key === 'category' && (sortConfig.direction === 'ascending' ? '↑' : '↓')}
+                        </th>
+                        <th className="py-3 px-4 text-left text-sm font-medium text-gray-700 cursor-pointer" onClick={() => handleSort('price')}>
+                          Precio {sortConfig.key === 'price' && (sortConfig.direction === 'ascending' ? '↑' : '↓')}
+                        </th>
+                        <th className="py-3 px-4 text-left text-sm font-medium text-gray-700 cursor-pointer" onClick={() => handleSort('stock')}>
+                          Stock {sortConfig.key === 'stock' && (sortConfig.direction === 'ascending' ? '↑' : '↓')}
+                        </th>
+                        <th className="py-3 px-4 text-left text-sm font-medium text-gray-700 cursor-pointer" onClick={() => handleSort('minStock')}>
+                          Mínimo {sortConfig.key === 'minStock' && (sortConfig.direction === 'ascending' ? '↑' : '↓')}
+                        </th>
+                        <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">
+                          Acciones
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currentItems.map(product => {
+                        const CategoryIcon = getCategoryIcon(product.category);
+                        const categoryColor = getCategoryColor(product.category);
+                        const isLowStock = product.stock <= product.minStock && product.stock > 0;
+                        const isOutOfStock = product.stock === 0;
+                        return (
+                          <tr key={product.id} className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${isOutOfStock ? 'bg-red-50' : ''}`}>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${categoryColor}`}>
+                                  <CategoryIcon size={18} />
+                                </div>
+                                <div>
+                                  <div className="font-medium text-gray-900">{product.name}</div>
+                                  {product.barcode && (
+                                    <div className="text-xs text-gray-500 flex items-center">
+                                      <IconBarcode className="mr-1" size={10} />
+                                      {product.barcode}
+                                    </div>
+                                  )}
+                                  {isOutOfStock && (
+                                    <span className="inline-block mt-1 px-2 py-1 text-xs font-bold text-red-800 bg-red-200 rounded">
+                                      AGOTADO
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                              <div>
-                                <div className="font-medium text-gray-900">{product.name}</div>
-                                {product.barcode && (
-                                  <div className="text-xs text-gray-500 flex items-center">
-                                    <IconBarcode className="mr-1" size={10} />
-                                    {product.barcode}
-                                  </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <code className="px-2 py-1 bg-gray-100 rounded text-sm font-mono">
+                                {product.code}
+                              </code>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center">
+                                <span className={`px-2 py-1 rounded-full text-xs ${categoryColor}`}>
+                                  {product.category || 'Sin categoría'}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="font-bold text-primary-600">
+                                {formatCurrency(product.price)}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center">
+                                <span className={`font-bold text-lg ${isOutOfStock ? 'text-red-600' :
+                                    isLowStock ? 'text-orange-600' : 'text-green-600'
+                                  }`}>
+                                  {product.stock}
+                                </span>
+                                {isLowStock && !isOutOfStock && (
+                                  <IconAlertTriangle className="ml-2 text-orange-500" size={16} />
                                 )}
                                 {isOutOfStock && (
-                                  <span className="inline-block mt-1 px-2 py-1 text-xs font-bold text-red-800 bg-red-200 rounded">
-                                    AGOTADO
-                                  </span>
+                                  <IconX className="ml-2 text-red-500" size={18} />
                                 )}
                               </div>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <code className="px-2 py-1 bg-gray-100 rounded text-sm font-mono">
-                              {product.code}
-                            </code>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center">
-                              <span className={`px-2 py-1 rounded-full text-xs ${categoryColor}`}>
-                                {product.category || 'Sin categoría'}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="font-bold text-primary-600">
-                              {formatCurrency(product.price)}
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center">
-                              <span className={`font-bold text-lg ${isOutOfStock ? 'text-red-600' :
-                                isLowStock ? 'text-orange-600' : 'text-green-600'
-                                }`}>
-                                {product.stock}
-                              </span>
-                              {isLowStock && !isOutOfStock && (
-                                <IconAlertTriangle className="ml-2 text-orange-500" size={16} />
-                              )}
-                              {isOutOfStock && (
-                                <IconX className="ml-2 text-red-500" size={18} />
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="text-gray-600">{product.minStock}</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex space-x-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                icon={IconEdit}
-                                onClick={() => handleEdit(product)}
-                                className="!p-2"
-                                title="Editar producto"
-                              />
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                icon={IconRestock}
-                                onClick={() => handleRestock(product)}
-                                className="!p-2 text-green-600 hover:text-green-700"
-                                title="Reabastecer stock"
-                              />
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                icon={IconTrash}
-                                onClick={() => handleDelete(product)}
-                                className="!p-2 text-red-500 hover:text-red-700"
-                                title="Eliminar producto"
-                              />
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {stats.categories.length > 0 && (
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h4 className="font-medium text-gray-900 mb-3">Categorías Disponibles</h4>
-                <div className="flex flex-wrap gap-2">
-                  {stats.categories.map((category, index) => {
-                    const CategoryIcon = getCategoryIcon(category);
-                    const categoryColor = getCategoryColor(category);
-                    return (
-                      <span
-                        key={index}
-                        className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 ${categoryColor}`}
-                      >
-                        <CategoryIcon size={14} />
-                        {category}
-                      </span>
-                    );
-                  })}
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="text-gray-600">{product.minStock}</div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  icon={IconEdit}
+                                  onClick={() => handleEdit(product)}
+                                  className="!p-2"
+                                  title="Editar producto"
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  icon={IconRestock}
+                                  onClick={() => handleRestock(product)}
+                                  className="!p-2 text-green-600 hover:text-green-700"
+                                  title="Reabastecer stock"
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  icon={IconTrash}
+                                  onClick={() => handleDelete(product)}
+                                  className="!p-2 text-red-500 hover:text-red-700"
+                                  title="Eliminar producto"
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
+
+                {/* ==================== PAGINACIÓN ==================== */}
+                {filteredProducts.length > itemsPerPage && (
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                      <div className="text-sm text-gray-600">
+                        Mostrando {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredProducts.length)} de {filteredProducts.length} productos
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={goToPreviousPage}
+                          disabled={currentPage === 1}
+                          className={currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}
+                        >
+                          Anterior
+                        </Button>
+                        
+                        <div className="flex space-x-1">
+                          {(() => {
+                            const pageNumbers = [];
+                            const maxButtons = 5;
+                            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+                            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+                            
+                            if (endPage - startPage + 1 < maxButtons) {
+                              startPage = Math.max(1, endPage - maxButtons + 1);
+                            }
+                            
+                            for (let i = startPage; i <= endPage; i++) {
+                              pageNumbers.push(i);
+                            }
+                            
+                            return pageNumbers.map(number => (
+                              <button
+                                key={number}
+                                onClick={() => paginate(number)}
+                                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                                  currentPage === number
+                                    ? 'bg-primary-500 text-white'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                              >
+                                {number}
+                              </button>
+                            ));
+                          })()}
+                        </div>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={goToNextPage}
+                          disabled={currentPage === totalPages}
+                          className={currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}
+                        >
+                          Siguiente
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </Card>
+
           <Alert
             type="info"
             title="Información importante"
@@ -835,7 +918,8 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
           </Alert>
         </div>
       </main>
-      <Footer darkMode={darkMode} />
+
+      {/* Modal de eliminar producto */}
       {showDeleteModal && selectedProduct && (
         <Modal
           isOpen={showDeleteModal}
@@ -1016,7 +1100,7 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
         </Modal>
       )}
 
-      {/* ==================== MODAL PARA AGREGAR NUEVO PRODUCTO ==================== */}
+      {/* Modal para agregar nuevo producto */}
       {showAddModal && (
         <Modal
           isOpen={showAddModal}
@@ -1135,6 +1219,7 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
         </Modal>
       )}
 
+      {/* Modal de stock bajo */}
       {showLowStockModal && (
         <Modal
           isOpen={showLowStockModal}
@@ -1199,7 +1284,7 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
           </div>
         </Modal>
       )}
-      <Footer darkMode={darkMode} />
+
       <AlertModal
         isOpen={alertState.isOpen}
         onClose={closeAlert}
@@ -1208,6 +1293,7 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
         message={alertState.message}
         autoClose={4000}
       />
+      <Footer darkMode={darkMode} />
     </div>
   );
 };
