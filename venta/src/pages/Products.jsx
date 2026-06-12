@@ -250,7 +250,7 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
         stockMinimo: editProduct.minStock,
         codigoBarra: editProduct.barcode?.trim() || null
       };
-    
+
       const response = await productService.update(editProduct.id, apiProduct);
       if (response.success) {
         await loadProducts();
@@ -426,7 +426,7 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
         })
       };
       const response = await productService.create(apiProduct);
-     
+
       if (response.success) {
         await loadProducts();
         setShowAddModal(false);
@@ -439,7 +439,7 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
           minStock: 5,
           barcode: ''
         });
-       
+
         showAlert({
           type: 'success',
           title: '¡Producto agregado!',
@@ -456,16 +456,16 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
       }
     } catch (error) {
       console.error('Error completo:', error);
-     
+
       // Mensajes más específicos
       let msg = error.error || 'No se pudo guardar el producto.';
-     
+
       if (error.error?.includes('código interno')) {
         msg = 'Ya existe un producto con ese código interno.\nDeja el campo vacío para generar uno automático.';
       } else if (error.error?.includes('código de barras')) {
         msg = 'Ya existe un producto con ese código de barras.\nPrueba con otro o déjalo vacío.';
       }
-     
+
       showAlert({
         type: 'error',
         title: 'Error al agregar',
@@ -750,7 +750,7 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
                           <td className="py-3 px-4">
                             <div className="flex items-center">
                               <span className={`font-bold text-lg ${isOutOfStock ? 'text-red-600' :
-                                  isLowStock ? 'text-orange-600' : 'text-green-600'
+                                isLowStock ? 'text-orange-600' : 'text-green-600'
                                 }`}>
                                 {product.stock}
                               </span>
@@ -893,8 +893,130 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
           </div>
         </Modal>
       )}
-      
-            {/* ==================== MODAL PARA AGREGAR NUEVO PRODUCTO ==================== */}
+
+      {/* ==================== MODAL PARA EDITAR PRODUCTO ==================== */}
+      {showEditModal && (
+        <Modal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          title="Editar Producto"
+          size="lg"
+        >
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre del Producto *
+                </label>
+                <Input
+                  type="text"
+                  value={editProduct.name}
+                  onChange={(e) => setEditProduct({ ...editProduct, name: e.target.value })}
+                  placeholder="Ej: Arroz Costeño 5kg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Código Interno *
+                </label>
+                <Input
+                  type="text"
+                  value={editProduct.code}
+                  onChange={(e) => setEditProduct({ ...editProduct, code: e.target.value })}
+                  placeholder="Código único"
+                  disabled
+                  className="bg-gray-100"
+                />
+                <p className="text-xs text-gray-400 mt-1">El código no se puede modificar</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Precio *
+                </label>
+                <Input
+                  type="number"
+                  value={editProduct.price}
+                  onChange={(e) => setEditProduct({ ...editProduct, price: parseFloat(e.target.value) || 0 })}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Categoría
+                </label>
+                <Input
+                  type="text"
+                  value={editProduct.category}
+                  onChange={(e) => setEditProduct({ ...editProduct, category: e.target.value })}
+                  placeholder="Ej: Alimentos, Bebidas"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Stock Actual
+                </label>
+                <Input
+                  type="number"
+                  value={editProduct.stock}
+                  onChange={(e) => setEditProduct({ ...editProduct, stock: parseInt(e.target.value) || 0 })}
+                  placeholder="0"
+                  min="0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Stock Mínimo
+                </label>
+                <Input
+                  type="number"
+                  value={editProduct.minStock}
+                  onChange={(e) => setEditProduct({ ...editProduct, minStock: parseInt(e.target.value) || 5 })}
+                  placeholder="5"
+                  min="0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Código de Barras
+                </label>
+                <Input
+                  type="text"
+                  value={editProduct.barcode || ''}
+                  onChange={(e) => setEditProduct({ ...editProduct, barcode: e.target.value })}
+                  placeholder="Opcional"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 pt-6 border-t border-gray-200 flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowEditModal(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleSaveEdit}
+                loading={loading}
+                icon={IconSave}
+              >
+                Guardar Cambios
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ==================== MODAL PARA AGREGAR NUEVO PRODUCTO ==================== */}
       {showAddModal && (
         <Modal
           isOpen={showAddModal}
@@ -1012,7 +1134,7 @@ const Products = ({ darkMode, onThemeToggle, isAuthenticated, user, onLogout }) 
           </div>
         </Modal>
       )}
-      
+
       {showLowStockModal && (
         <Modal
           isOpen={showLowStockModal}
