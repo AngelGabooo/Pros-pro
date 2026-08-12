@@ -125,13 +125,13 @@ const Header = ({
             <Link to="/" className="flex items-center space-x-3">
               <div className="flex items-center">
                 <img
-                  src="/logo2.png"
-                  alt="POS Pro Logo"
+                  src="/vent.png"
+                  alt="Ventyx Logo"
                   className="h-12 w-12 object-contain"
                 />
                 <div className="ml-3">
                   <h1 className="text-xl font-bold text-gray-900">
-                    <span className="text-primary-500">POS</span>Pro
+                    <span className="text-primary-500">Ven</span>tyx
                   </h1>
                   <p className="text-xs text-gray-500">Sistema de Punto de Venta</p>
                 </div>
@@ -161,7 +161,7 @@ const Header = ({
                 {/* Botón principal para ir al POS */}
                 <Link to="/pos">
                   <Button variant="primary" size="sm" icon={IconCash}>
-                    Ir al POS
+                    Ir al Ventyx
                   </Button>
                 </Link>
 

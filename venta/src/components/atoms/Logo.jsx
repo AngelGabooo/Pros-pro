@@ -43,7 +43,7 @@ const Logo = ({
             ${sizeConfig.text}
             text-gray-900
           `}>
-            POS<span className="text-primary-500">Pro</span>
+            Ven<span className="text-primary-500">tyx</span>
           </h1>
           <p className={`
             text-xs text-gray-500

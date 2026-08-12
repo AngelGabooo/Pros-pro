@@ -248,7 +248,7 @@ function App() {
             </div>
           </div>
           <h2 className="text-xl font-bold bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent mb-2">
-            FastPOS
+            Ventyx
           </h2>
           <p className="text-gray-600 dark:text-gray-400">Iniciando aplicación...</p>
         </div>
@@ -361,7 +361,7 @@ function App() {
                 <h3 className="text-lg font-bold text-gray-800">
                   Mantenimiento Programado
                 </h3>
-                <p className="text-sm text-gray-600">Sistema FastPOS</p>
+                <p className="text-sm text-gray-600">Sistema Ventyx</p>
               </div>
             </div>
             
@@ -494,7 +494,7 @@ function App() {
           <div className="text-xs text-gray-500 text-center">
             <span className="flex items-center justify-center gap-1">
               <IconSettings className="h-3 w-3" />
-              FastPOS Maintenance • Actualizado hace {minutesUntil % 60} min
+              Ventyx Mantenimiento • Actualizado hace {minutesUntil % 60} min
             </span>
           </div>
         </div>

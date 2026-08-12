@@ -113,9 +113,9 @@ const Footer = () => {
               </div>
               <div>
                 <h1 className="text-sm font-bold text-gray-800">
-                  <span className="text-primary-600">POS</span>Pro
+                  <span className="text-primary-600">Ven</span>tyx
                 </h1>
-                <p className="text-[10px] text-gray-500">Sistema POS</p>
+                <p className="text-[10px] text-gray-500">Sistema Ventyx</p>
               </div>
             </div>
            
@@ -294,7 +294,7 @@ const Footer = () => {
               
               <div className="flex items-center text-[10px] text-gray-500">
                 <IconCopyright className="mr-0.5" size={9} />
-                <span>{currentYear} POS Pro v2.0</span>
+                <span>{currentYear} Ventyx v2.0</span>
               </div>
             </div>
             

@@ -46,14 +46,14 @@ const AuthContainer = ({
           <div className="mb-8 flex flex-col items-center lg:items-start">
             <div className="flex items-center space-x-4 mb-4">
               <img
-                src="/logo2.png"
-                alt="POS Pro Logo"
+                src="/vent.png"
+                alt="Ventyx Logo"
                 className="h-20 w-20 object-contain"
               />
               <div>
                 <h1 className="text-4xl font-bold text-gray-900">
-                  <span className="text-primary-600">POS</span>Pro
-                </h1>
+                  <span className="text-primary-600">Ven</span>tyx
+                                  </h1>
                 <p className="text-gray-600">Sistema de Punto de Venta</p>
               </div>
             </div>
@@ -116,7 +116,7 @@ const AuthContainer = ({
               </div>
               <div className="flex items-center justify-between text-sm mt-2">
                 <span className="text-gray-600">Versión</span>
-                <span className="font-medium">POS Pro 2.0</span>
+                <span className="font-medium">Ventyx 2.0</span>
               </div>
             </div>
           </div>
@@ -150,8 +150,8 @@ const AuthContainer = ({
                 {/* Logo pequeño en formulario */}
                 <div className="flex items-center">
                   <img
-                    src="/logo2.png"
-                    alt="POS Pro Logo"
+                    src="/vent.png"
+                    alt="Ventyx Logo"
                     className="h-10 w-10 object-contain"
                   />
                   <AuthIcon className="text-primary-500 ml-2" size={20} />
@@ -198,7 +198,7 @@ const AuthContainer = ({
          
           <div className="mt-6 text-center text-sm text-gray-500">
             <p>
-              Sistema POS Pro v2.0 · {new Date().getFullYear()} ·{' '}
+              Sistema Ventyx v2.0 · {new Date().getFullYear()} ·{' '}
               <a href="#support" className="text-primary-500 hover:text-primary-600">
                 Soporte Técnico
               </a>
